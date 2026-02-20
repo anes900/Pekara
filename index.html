@@ -173,16 +173,27 @@ function App() {
   const [fbSt,     setFbSt]   = useState("🔄 Spajanje...");
 
   useEffect(() => {
+    // Timeout — ako Firebase ne odgovori za 8 sekundi, prikaži grešku
+    const timeout = setTimeout(() => {
+      setFbSt("🔴 TIMEOUT");
+      setData(SEED);
+      setKor(DEFAULT_KORISNICI);
+      setLoad(false);
+    }, 8000);
+
     (async () => {
       try {
         if (!window.__fbReady) throw new Error(window.__fbError || "Firebase nije inicijalizovan");
+        setFbSt("🔄 Čitanje podataka...");
         const [d, u] = await Promise.all([fbGet("data"), fbGet("users")]);
+        clearTimeout(timeout);
         setData(d || SEED);
         setKor(u || DEFAULT_KORISNICI);
         setFbSt("🟢 Spojeno");
         setLoad(false);
       } catch(e) {
-        console.error(e);
+        clearTimeout(timeout);
+        console.error("Firebase greška:", e.message);
         setFbSt("🔴 Greška: " + e.message);
         setData(SEED);
         setKor(DEFAULT_KORISNICI);
@@ -212,13 +223,26 @@ function App() {
   });
 
   if (loading) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#FFF8F0",gap:16}}>
-      <div style={{fontSize:64,animation:"spin 1.5s linear infinite"}}>🥖</div>
-      <p style={{fontFamily:"Georgia,serif",fontSize:20,color:"#4A2C0A"}}>{fbSt}</p>
-      {fbSt.includes("🔴") && (
-        <div style={{background:"#FFF0F0",border:"1px solid #FFCCCC",borderRadius:12,padding:"16px 24px",maxWidth:400,fontSize:13,color:"#C00000",textAlign:"center",lineHeight:1.8}}>
-          <b>❌ Firebase greška</b><br/>{fbSt.replace("🔴 Greška: ","")}
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#FFF8F0",gap:16,padding:20}}>
+      <div style={{fontSize:64, animation: fbSt.includes("🔴") ? "none" : "spin 1.5s linear infinite"}}>🥖</div>
+      <p style={{fontFamily:"Georgia,serif",fontSize:20,color:"#4A2C0A",textAlign:"center"}}>{
+        fbSt.includes("🔴") ? "⚠️ Problem sa Firebase" : fbSt
+      }</p>
+      {(fbSt.includes("🔴") || fbSt.includes("TIMEOUT")) && (
+        <div style={{background:"#FFF0F0",border:"2px solid #FFCCCC",borderRadius:16,padding:"20px 24px",maxWidth:380,fontSize:13,color:"#C00000",textAlign:"center",lineHeight:2}}>
+          <b style={{fontSize:15}}>❌ Firebase baza nije kreirana!</b><br/>
+          <div style={{color:"#333",marginTop:8,lineHeight:1.8}}>
+            1. Otvorite <b>console.firebase.google.com</b><br/>
+            2. Projekat: <b>mamamantia-73a56</b><br/>
+            3. Lijevi meni → <b>Realtime Database</b><br/>
+            4. Kliknite <b>"Create Database"</b><br/>
+            5. Odaberite <b>Europe</b> → <b>Test mode</b><br/>
+            6. Osvježite ovu stranicu
+          </div>
         </div>
+      )}
+      {!fbSt.includes("🔴") && !fbSt.includes("TIMEOUT") && (
+        <p style={{fontSize:13,color:"#8B6A4E"}}>Spajanje na Firebase bazu...</p>
       )}
     </div>
   );
