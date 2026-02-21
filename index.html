@@ -225,7 +225,13 @@ const KATEGORIJE = [
     {id:"sl_tufahija",naziv:"Tufahija"},{id:"sl_kadaif",naziv:"Kadaif"}]},
 ];
 
-const SVI_PROIZVODI = KATEGORIJE.flatMap(k => k.proizvodi.map(p => ({...p, kat:k.naziv, katId:k.id, direktna:k.direktna})));
+// SVI_PROIZVODI — default (statički). Dinamička verzija se čita iz data.kategorije
+const SVI_PROIZVODI_DEFAULT = KATEGORIJE.flatMap(k => k.proizvodi.map(p => ({...p, kat:k.naziv, katId:k.id, direktna:k.direktna})));
+// Helper koji uvijek vraća trenutne kategorije (default ili custom iz Firebase)
+const getKat  = (data) => (data && data.kategorije && data.kategorije.length > 0) ? data.kategorije : KATEGORIJE;
+const getSviP = (data) => getKat(data).flatMap(k => k.proizvodi.map(p => ({...p, kat:k.naziv, katId:k.id, direktna:k.direktna})));
+// Backwards compat — koristi se kad data nije dostupan (login ekran itd.)
+const SVI_PROIZVODI = SVI_PROIZVODI_DEFAULT;
 
 function genStanje() {
   const st=[]; let id=1;
@@ -259,7 +265,7 @@ const SEED = {
   stanjeLokala: genStanje(),
   dostave:[],evidencija:[],dnevnaProizvodnja:[],kretanja:[],popisi:[],
   dobavljaci:[],narudzbine:[],troskoviMesecni:[],activityLog:[],
-  zaklucakSmjene:[],otpremnice:[],cijene:{},
+  zaklucakSmjene:[],otpremnice:[],cijene:{},kategorije:[],
   nextId:{sirovine:16,dostave:1,evidencija:1,dnevnaPro:1,kretanja:1,popisi:1,dobavljaci:1,narudzbine:1,zaklucak:1,otpremnica:1},
 };
 
@@ -370,6 +376,7 @@ function App() {
     {key:"troskovi",   icon:"💰", label:"Troškovi",            roles:["direktor"]},
     {key:"dobavljaci", icon:"📦", label:"Dobavljači",          roles:["direktor","magacioner"]},
     {key:"korisnici",  icon:"🔑", label:"Korisnici & PIN",     roles:["direktor"]},
+    {key:"proizvodi",  icon:"🛒", label:"Upravljanje Proizvodima", roles:["direktor"]},
     {key:"aktivnost",  icon:"🕐", label:"Aktivnost",           roles:["direktor","magacioner","radnik","prodavac1","prodavac2"]},
   ];
 
@@ -393,6 +400,7 @@ function App() {
           {validTab==="troskovi"   && <Troskovi    data={data} persist={persist} perms={perms} />}
           {validTab==="dobavljaci" && <Dobavljaci  data={data} persist={persist} perms={perms} session={session} addLog={addLog} />}
           {validTab==="korisnici"  && <KorisniciTab korisnici={korisnici} persistUsers={persistUsers} />}
+          {validTab==="proizvodi"  && <UpravljanjeProizvodima data={data} persist={persist} />}
           {validTab==="aktivnost"  && <Aktivnost   data={data} session={session} />}
         </div>
       </div>
@@ -568,7 +576,7 @@ function Dashboard({data}) {
           return(<div key={lok} style={{background:"white",borderRadius:14,padding:"16px 18px",border:`2px solid ${info.boja}22`,boxShadow:"0 2px 10px rgba(0,0,0,.05)"}}>
             <div style={{fontFamily:"Georgia,serif",fontSize:15,fontWeight:700,color:info.boja,marginBottom:8}}>{title}</div>
             <div style={{fontFamily:"Georgia,serif",fontSize:26,fontWeight:800,color:info.boja,marginBottom:8}}>{fmtN(ukup)}<span style={{fontSize:13,fontWeight:400,color:"#7A6545",marginLeft:6}}>kom</span></div>
-            {KATEGORIJE.map(kat=>{const uk=kat.proizvodi.reduce((s,p)=>s+(items.find(x=>x.prodId===p.id)?.kolicina||0),0);return<div key={kat.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0",borderBottom:"1px solid #EDE5CC"}}><span>{kat.icon} {kat.naziv}</span><b style={{color:info.boja}}>{fmtN(uk)}</b></div>;})}
+            {getKat(data).map(kat=>{const uk=kat.proizvodi.reduce((s,p)=>s+(items.find(x=>x.prodId===p.id)?.kolicina||0),0);return<div key={kat.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0",borderBottom:"1px solid #EDE5CC"}}><span>{kat.icon} {kat.naziv}</span><b style={{color:info.boja}}>{fmtN(uk)}</b></div>;})}
           </div>);
         })}
       </div>
@@ -613,7 +621,7 @@ function Dashboard({data}) {
 // ── DNEVNA PROIZVODNJA ────────────────────────────────────────────
 function DnevnaProizvodnja({data,persist,session,addLog}) {
   const [show,setShow]=useState(false); const [stavke,setSt]=useState({});
-  const startNew=()=>{const st={};SVI_PROIZVODI.filter(p=>!p.direktna).forEach(p=>{st[p.id]="";});setSt(st);setShow(true);};
+  const startNew=()=>{const st={};getSviP(data).filter(p=>!p.direktna).forEach(p=>{st[p.id]="";});setSt(st);setShow(true);};
   const save=()=>{
     const arr=Object.entries(stavke).filter(([,v])=>+v>0).map(([id,kol])=>({prodId:id,kolicina:+kol}));
     if(!arr.length){alert("Unesite barem jedan artikal!");return;}
@@ -633,7 +641,7 @@ function DnevnaProizvodnja({data,persist,session,addLog}) {
         <div style={{background:"#FFF8DC",borderRadius:10,padding:"10px 16px",fontSize:13,color:"#C8860A",fontWeight:700}}>👨‍🍳 Danas: <b>{fmtN(danasUk)} kom</b></div>
       </div>
       <Card title="🏭 Trenutno Stanje u Proizvodnji">
-        {KATEGORIJE.filter(k=>!k.direktna).map(kat=>{
+        {getKat(data).filter(k=>!k.direktna).map(kat=>{
           const items=kat.proizvodi.map(p=>({...p,kolicina:(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija==="proizvodnja")?.kolicina||0}));
           return(<div key={kat.id} style={{marginBottom:14}}><div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:6}}>{kat.icon} {kat.naziv}</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:6}}>
@@ -645,7 +653,7 @@ function DnevnaProizvodnja({data,persist,session,addLog}) {
         {(data.dnevnaProizvodnja||[]).length===0?<p style={{color:"#7A6545",fontSize:13,textAlign:"center",padding:20}}>Nema unesenih proizvodnji.</p>:(data.dnevnaProizvodnja||[]).slice(0,15).map((d,i)=>{
           const ukup=d.stavke.reduce((s,x)=>s+x.kolicina,0);
           return(<div key={d.id} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"11px 14px",background:i%2===0?"white":"#FAF6EE",borderRadius:10,border:"1px solid #E8DECA",marginBottom:7}}>
-            <div style={{flex:1}}><div style={{display:"flex",gap:8,marginBottom:5,flexWrap:"wrap"}}><Tag bg="#FFF8DC" color="#C8860A">👨‍🍳 {d.datum}</Tag><Tag bg="#FAF6EE" color="#C8860A">{d.korisnik}</Tag><Tag bg="#E8F5E9" color="#107C41">{fmtN(ukup)} kom</Tag></div><div style={{fontSize:12,color:"#5A4A35",lineHeight:1.6}}>{d.stavke.map(st=>{const p=SVI_PROIZVODI.find(x=>x.id===st.prodId);return `${p?.naziv||"?"}: ${st.kolicina}`;}).join(" · ")}</div></div>
+            <div style={{flex:1}}><div style={{display:"flex",gap:8,marginBottom:5,flexWrap:"wrap"}}><Tag bg="#FFF8DC" color="#C8860A">👨‍🍳 {d.datum}</Tag><Tag bg="#FAF6EE" color="#C8860A">{d.korisnik}</Tag><Tag bg="#E8F5E9" color="#107C41">{fmtN(ukup)} kom</Tag></div><div style={{fontSize:12,color:"#5A4A35",lineHeight:1.6}}>{d.stavke.map(st=>{const p=getSviP(data).find(x=>x.id===st.prodId);return `${p?.naziv||"?"}: ${st.kolicina}`;}).join(" · ")}</div></div>
             <div style={{color:"#C8A050",fontSize:10,whiteSpace:"nowrap"}}>{d.vreme}</div>
           </div>);
         })}
@@ -653,7 +661,7 @@ function DnevnaProizvodnja({data,persist,session,addLog}) {
       {show&&<Modal title="👨‍🍳 Unos Dnevne Proizvodnje" onClose={()=>setShow(false)}>
         <div style={{background:"#FFF8DC",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#C8860A",fontWeight:600,marginBottom:14}}>📅 {today()} · {session.ime}</div>
         <div style={{maxHeight:400,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,marginBottom:14}}>
-          {KATEGORIJE.filter(k=>!k.direktna).map(kat=>(
+          {getKat(data).filter(k=>!k.direktna).map(kat=>(
             <div key={kat.id}><div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:5}}>{kat.icon} {kat.naziv}</div>
               {kat.proizvodi.map(p=>{const proSt=(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija==="proizvodnja")?.kolicina||0;return(<div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",background:"#FEFCF5",borderRadius:8,border:"1px solid #E8DECA",marginBottom:4}}><div style={{flex:1,fontSize:13,fontWeight:600}}>{p.naziv}</div><span style={{fontSize:11,color:"#7A6545",width:75,textAlign:"right"}}>stanje: <b>{proSt}</b></span><input type="number" min="0" value={stavke[p.id]||""} onChange={e=>setSt(f=>({...f,[p.id]:e.target.value}))} style={{...S.input,width:80,textAlign:"right"}} placeholder="0"/></div>);})}
             </div>
@@ -669,11 +677,11 @@ function DnevnaProizvodnja({data,persist,session,addLog}) {
 // ── DOSTAVA ───────────────────────────────────────────────────────
 function Dostava({data,persist,perms,session,addLog}) {
   const [show,setShow]=useState(false); const [selLok,setSelL]=useState("mama1"); const [stavke,setSt]=useState({});
-  const startNew=()=>{const st={};SVI_PROIZVODI.filter(p=>!p.direktna).forEach(p=>{st[p.id]="";});setSt(st);setShow(true);};
+  const startNew=()=>{const st={};getSviP(data).filter(p=>!p.direktna).forEach(p=>{st[p.id]="";});setSt(st);setShow(true);};
   const save=()=>{
     const arr=Object.entries(stavke).filter(([,v])=>+v>0).map(([id,kol])=>({prodId:id,kolicina:+kol}));
     if(!arr.length){alert("Unesite barem jednu količinu!");return;}
-    for(const st of arr){const pr=(data.stanjeLokala||[]).find(s=>s.prodId===st.prodId&&s.lokacija==="proizvodnja");if(!pr||pr.kolicina<st.kolicina){const p=SVI_PROIZVODI.find(x=>x.id===st.prodId);alert(`Nema dovoljno "${p?.naziv}"! Dostupno: ${pr?.kolicina||0}`);return;}}
+    for(const st of arr){const pr=(data.stanjeLokala||[]).find(s=>s.prodId===st.prodId&&s.lokacija==="proizvodnja");if(!pr||pr.kolicina<st.kolicina){const p=getSviP(data).find(x=>x.id===st.prodId);alert(`Nema dovoljno "${p?.naziv}"! Dostupno: ${pr?.kolicina||0}`);return;}}
     const lok=LOKALI[selLok]; let ns=[...(data.stanjeLokala||[])];
     arr.forEach(st=>{ns=ns.map(s=>s.prodId===st.prodId&&s.lokacija==="proizvodnja"?{...s,kolicina:s.kolicina-st.kolicina}:s.prodId===st.prodId&&s.lokacija===selLok?{...s,kolicina:s.kolicina+st.kolicina}:s);});
     persist(addLog({...data,stanjeLokala:ns,dostave:[{id:data.nextId.dostave,lokacija:selLok,lokNaziv:lok.naziv,datum:today(),vreme:nowStr(),stavke:arr,korisnik:session.ime},...(data.dostave||[])],nextId:{...data.nextId,dostave:data.nextId.dostave+1}},`Dostava u ${lok.naziv}: ${arr.reduce((s,x)=>s+x.kolicina,0)} kom`));
@@ -683,7 +691,7 @@ function Dostava({data,persist,perms,session,addLog}) {
     <div style={{display:"flex",flexDirection:"column",gap:18}}>
       {perms.canDeliver&&<div><Btn icon="🚚" label="Nova Dostava u Lokal" onClick={startNew} color="#C8860A"/></div>}
       <Card title="🏭 Stanje u Proizvodnji">
-        {KATEGORIJE.filter(k=>!k.direktna).map(kat=>{
+        {getKat(data).filter(k=>!k.direktna).map(kat=>{
           const items=kat.proizvodi.map(p=>({...p,pro:(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija==="proizvodnja")?.kolicina||0,m1:(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija==="mama1")?.kolicina||0,m2:(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija==="mama2")?.kolicina||0}));
           return(<div key={kat.id} style={{marginBottom:14}}><div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:6}}>{kat.icon} {kat.naziv}</div>
             <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{background:"#C8860A"}}>{["Naziv","Proizvodnja","Mama 1","Mama 2"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
@@ -698,7 +706,7 @@ function Dostava({data,persist,perms,session,addLog}) {
       {show&&<Modal title="🚚 Nova Dostava iz Proizvodnje" onClose={()=>setShow(false)}>
         <div style={{marginBottom:14}}><label style={S.label}>Odredišni Lokal</label><div style={{display:"flex",gap:10}}>{["mama1","mama2"].map(l=>{const li=LOKALI[l];return<button key={l} onClick={()=>setSelL(l)} style={{flex:1,padding:"12px",borderRadius:10,border:`2px solid ${selLok===l?li.boja:"#E0D5BE"}`,background:selLok===l?li.bg:"white",color:li.boja,fontWeight:700,cursor:"pointer",fontSize:14}}>{li.icon} {li.naziv}</button>;})}</div></div>
         <div style={{maxHeight:360,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,marginBottom:14}}>
-          {KATEGORIJE.filter(k=>!k.direktna).map(kat=>(
+          {getKat(data).filter(k=>!k.direktna).map(kat=>(
             <div key={kat.id}><div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:5}}>{kat.icon} {kat.naziv}</div>
               {kat.proizvodi.map(p=>{const d=(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija==="proizvodnja")?.kolicina||0;return<div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 12px",background:d<1?"#FFF0F0":"#FEFCF5",borderRadius:8,border:"1px solid #E8DECA",marginBottom:4}}><div style={{flex:1,fontSize:13,fontWeight:600}}>{p.naziv}</div><span style={{fontSize:11,color:d<1?"#C00000":"#7A6545",width:65,textAlign:"right"}}>dost: <b>{d}</b></span><input type="number" min="0" max={d} value={stavke[p.id]||""} onChange={e=>setSt(f=>({...f,[p.id]:e.target.value}))} disabled={d<1} style={{...S.input,width:75,textAlign:"right",background:d<1?"#F5F5F5":"white"}} placeholder="0"/></div>;})}
             </div>
@@ -721,7 +729,7 @@ function StanjeLokala({data,myLokal}) {
           <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
             <div style={{background:info.bg,borderRadius:10,padding:"10px 14px",border:`1px solid ${info.boja}22`,display:"flex",gap:8,alignItems:"center"}}><span>📦</span><div><div style={{fontWeight:800,color:info.boja,fontSize:15}}>{fmtN(ukupK)}</div><div style={{fontSize:11,color:"#5A4A35"}}>kom ukupno</div></div></div>
           </div>
-          {KATEGORIJE.map(kat=>{
+          {getKat(data).map(kat=>{
             const katItems=kat.proizvodi.map(p=>({...p,kolicina:items.find(s=>s.prodId===p.id)?.kolicina||0}));
             return(<div key={kat.id} style={{marginBottom:14}}><div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:6,display:"flex",alignItems:"center",gap:6}}>{kat.icon} {kat.naziv}{kat.direktna&&<Tag bg="#E8F5E9" color="#107C41">📥 Direktna</Tag>}</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:7}}>
@@ -738,14 +746,14 @@ function StanjeLokala({data,myLokal}) {
 function Evidencija({data,persist,session,myLokal,addLog}) {
   const [show,setShow]=useState(false); const [tip,setTip]=useState("REFUZ"); const [selLok,setSelL]=useState(myLokal&&myLokal!=="proizvodnja"?myLokal:"mama1"); const [stavke,setSt]=useState({});
   const TIPOVI={REFUZ:{label:"Refuz",icon:"↩️",opis:"Roba vraćena — smanjuje stanje",boja:"#F57F17",bg:"#FFF8DC",delta:-1,katFilter:k=>!k.direktna},SKART:{label:"Škart",icon:"🗑️",opis:"Bačeno/isteklo — smanjuje stanje",boja:"#C00000",bg:"#FFF0F0",delta:-1,katFilter:()=>true},PRIJEM_DIREKTNO:{label:"Prijem Direktno",icon:"📥",opis:"Pića od dobavljača — povećava stanje",boja:"#107C41",bg:"#E8F5E9",delta:+1,katFilter:k=>k.direktna},HRANA:{label:"Hrana Uposljenika",icon:"🍽️",opis:"Pojeli uposljenici — smanjuje stanje",boja:"#6A1B9A",bg:"#F3E5F5",delta:-1,katFilter:k=>!k.direktna}};
-  const startNew=t=>{setTip(t);const st={};KATEGORIJE.filter(TIPOVI[t].katFilter).forEach(k=>k.proizvodi.forEach(p=>{st[p.id]="";}));setSt(st);setShow(true);};
+  const startNew=t=>{setTip(t);const st={};getKat(data).filter(TIPOVI[t].katFilter).forEach(k=>k.proizvodi.forEach(p=>{st[p.id]="";}));setSt(st);setShow(true);};
   const save=()=>{
     const tI=TIPOVI[tip]; const arr=Object.entries(stavke).filter(([,v])=>+v>0).map(([id,kol])=>({prodId:id,kolicina:+kol}));
     if(!arr.length){alert("Unesite barem jednu količinu!");return;}
-    if(tI.delta<0){for(const st of arr){const cur=(data.stanjeLokala||[]).find(s=>s.prodId===st.prodId&&s.lokacija===selLok);if((cur?.kolicina||0)<st.kolicina){const p=SVI_PROIZVODI.find(x=>x.id===st.prodId);alert(`Nema dovoljno "${p?.naziv}"! Dostupno: ${cur?.kolicina||0}`);return;}}}
+    if(tI.delta<0){for(const st of arr){const cur=(data.stanjeLokala||[]).find(s=>s.prodId===st.prodId&&s.lokacija===selLok);if((cur?.kolicina||0)<st.kolicina){const p=getSviP(data).find(x=>x.id===st.prodId);alert(`Nema dovoljno "${p?.naziv}"! Dostupno: ${cur?.kolicina||0}`);return;}}}
     let ns=[...(data.stanjeLokala||[])];
     arr.forEach(st=>{ns=ns.map(s=>s.prodId===st.prodId&&s.lokacija===selLok?{...s,kolicina:Math.max(0,s.kolicina+(tI.delta*st.kolicina))}:s);});
-    const lok=LOKALI[selLok]; const zapisi=arr.map((st,idx)=>{const p=SVI_PROIZVODI.find(x=>x.id===st.prodId);return{id:data.nextId.evidencija+idx,tip,lokacija:selLok,lokNaziv:lok.naziv,prodId:st.prodId,prodNaziv:p?.naziv||"?",kolicina:st.kolicina,datum:today(),vreme:nowStr(),korisnik:session.ime};});
+    const lok=LOKALI[selLok]; const zapisi=arr.map((st,idx)=>{const p=getSviP(data).find(x=>x.id===st.prodId);return{id:data.nextId.evidencija+idx,tip,lokacija:selLok,lokNaziv:lok.naziv,prodId:st.prodId,prodNaziv:p?.naziv||"?",kolicina:st.kolicina,datum:today(),vreme:nowStr(),korisnik:session.ime};});
     persist(addLog({...data,stanjeLokala:ns,evidencija:[...zapisi,...(data.evidencija||[])],nextId:{...data.nextId,evidencija:data.nextId.evidencija+zapisi.length}},`${tI.label} u ${lok.naziv}: ${arr.reduce((s,x)=>s+x.kolicina,0)} kom`));
     setShow(false);
   };
@@ -764,7 +772,7 @@ function Evidencija({data,persist,session,myLokal,addLog}) {
         <div style={{background:tI.bg,borderRadius:10,padding:"10px 14px",fontSize:12,color:tI.boja,fontWeight:600,marginBottom:14}}>{tI.opis}</div>
         {lokovi.length>1&&<div style={{marginBottom:14}}><label style={S.label}>Lokal</label><div style={{display:"flex",gap:8}}>{lokovi.map(l=>{const li=LOKALI[l];return<button key={l} onClick={()=>setSelL(l)} style={{flex:1,padding:"10px",borderRadius:10,border:`2px solid ${selLok===l?li.boja:"#E0D5BE"}`,background:selLok===l?li.bg:"white",color:li.boja,fontWeight:700,cursor:"pointer",fontSize:13}}>{li.icon} {li.naziv}</button>;})}</div></div>}
         <div style={{maxHeight:390,overflowY:"auto",display:"flex",flexDirection:"column",gap:11,marginBottom:14}}>
-          {KATEGORIJE.filter(tI.katFilter).map(kat=>(
+          {getKat(data).filter(tI.katFilter).map(kat=>(
             <div key={kat.id}><div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:5}}>{kat.icon} {kat.naziv}</div>
               {kat.proizvodi.map(p=>{const cur=(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija===selLok);const kol=cur?.kolicina||0;return<div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",background:"#FEFCF5",borderRadius:8,border:"1px solid #E8DECA",marginBottom:4}}><div style={{flex:1,fontSize:13,fontWeight:600}}>{p.naziv}</div>{tI.delta<0&&<span style={{fontSize:11,color:"#7A6545",width:70,textAlign:"right",flexShrink:0}}>stanje: <b>{kol}</b></span>}<input type="number" min="0" value={stavke[p.id]||""} onChange={e=>setSt(f=>({...f,[p.id]:e.target.value}))} style={{...S.input,width:75,textAlign:"right"}} placeholder="0"/></div>;})}
             </div>
@@ -797,7 +805,7 @@ function Popis({data,persist,session,myLokal,addLog}) {
           const lok=LOKALI[popis.lokacija];const raz=popis.stavke.filter(s=>s.razlika!==0).length;
           return(<div key={popis.id} style={{background:"white",borderRadius:12,border:"1px solid #E8DECA",overflow:"hidden",marginBottom:10}}>
             <div style={{padding:"12px 16px",background:lok.bg,display:"flex",alignItems:"center",gap:12}}><span style={{fontSize:20}}>{lok.icon}</span><div style={{flex:1}}><span style={{fontWeight:700,color:lok.boja}}>{lok.naziv}</span><span style={{marginLeft:10,fontSize:12,color:"#5A4A35"}}>{popis.datum} · {popis.korisnik}</span></div><Tag bg={raz>0?"#FFF0F0":"#E8F5E9"} color={raz>0?"#C00000":"#107C41"}>{raz>0?`⚠️ ${raz} razlika`:"✅ OK"}</Tag></div>
-            <div style={{padding:"10px 16px"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}><thead><tr style={{background:"#F5F5F5"}}>{["Naziv","Sistem","Stvarna","Razlika"].map(h=><th key={h} style={{...S.th,color:"#C8860A",background:"#F5F5F5"}}>{h}</th>)}</tr></thead><tbody>{popis.stavke.map((st,i)=>{const p=SVI_PROIZVODI.find(x=>x.id===st.prodId);return<tr key={i} style={{background:st.razlika!==0?"#FFF8DC":"white"}}><td style={S.td}>{p?.naziv||"?"}</td><td style={{...S.td,textAlign:"right"}}>{fmtN(st.sistemska)}</td><td style={{...S.td,textAlign:"right",fontWeight:700}}>{fmtN(st.stvarna)}</td><td style={{...S.td,textAlign:"right",fontWeight:700,color:st.razlika===0?"#107C41":st.razlika>0?"#1D4ED8":"#C00000"}}>{st.razlika===0?"–":st.razlika>0?`+${st.razlika}`:st.razlika}</td></tr>;})}
+            <div style={{padding:"10px 16px"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}><thead><tr style={{background:"#F5F5F5"}}>{["Naziv","Sistem","Stvarna","Razlika"].map(h=><th key={h} style={{...S.th,color:"#C8860A",background:"#F5F5F5"}}>{h}</th>)}</tr></thead><tbody>{popis.stavke.map((st,i)=>{const p=getSviP(data).find(x=>x.id===st.prodId);return<tr key={i} style={{background:st.razlika!==0?"#FFF8DC":"white"}}><td style={S.td}>{p?.naziv||"?"}</td><td style={{...S.td,textAlign:"right"}}>{fmtN(st.sistemska)}</td><td style={{...S.td,textAlign:"right",fontWeight:700}}>{fmtN(st.stvarna)}</td><td style={{...S.td,textAlign:"right",fontWeight:700,color:st.razlika===0?"#107C41":st.razlika>0?"#1D4ED8":"#C00000"}}>{st.razlika===0?"–":st.razlika>0?`+${st.razlika}`:st.razlika}</td></tr>;})}
             </tbody></table></div></div>
           </div>);
         })}
@@ -806,7 +814,7 @@ function Popis({data,persist,session,myLokal,addLog}) {
         <div style={{padding:"8px 14px",background:LOKALI[selLok].bg,borderRadius:10,fontSize:12,color:LOKALI[selLok].boja,fontWeight:700,marginBottom:10}}>{LOKALI[selLok].icon} {LOKALI[selLok].naziv} · {today()}</div>
         <p style={{fontSize:11,color:"#7A6545",margin:"0 0 10px"}}>Unesite stvarno prebrojanu količinu. Prazna polja se preskačaju.</p>
         <div style={{maxHeight:400,overflowY:"auto",display:"flex",flexDirection:"column",gap:11,marginBottom:14}}>
-          {KATEGORIJE.map(kat=>(
+          {getKat(data).map(kat=>(
             <div key={kat.id}><div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:5}}>{kat.icon} {kat.naziv}</div>
               {kat.proizvodi.map(p=>{const cur=(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija===selLok);const kol=cur?.kolicina||0;const u=counted[p.id];const razl=u!==""&&u!==undefined?+u-kol:null;return<div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#FEFCF5",borderRadius:8,border:"1px solid #E8DECA",marginBottom:4}}><div style={{flex:1,fontSize:12,fontWeight:600}}>{p.naziv}<span style={{fontWeight:400,color:"#7A6545",marginLeft:6}}>({kol})</span></div><input type="number" min="0" value={counted[p.id]||""} onChange={e=>setCnt(c=>({...c,[p.id]:e.target.value}))} style={{...S.input,width:75,textAlign:"right"}} placeholder="..."/>{razl!==null&&<span style={{fontSize:12,fontWeight:700,width:38,textAlign:"right",color:razl===0?"#107C41":razl>0?"#1D4ED8":"#C00000"}}>{razl===0?"✅":razl>0?`+${razl}`:razl}</span>}</div>;})}
             </div>
@@ -923,7 +931,7 @@ function ZaklucakSmjene({data,persist,session,myLokal,addLog}) {
   const startZakljucak=(lok)=>{
     setSelL(lok);
     const kd={};
-    SVI_PROIZVODI.forEach(p=>{kd[p.id]="";});
+    getSviP(data).forEach(p=>{kd[p.id]="";});
     setKraj(kd);
     setBlag("");
     setShow(true);
@@ -939,7 +947,7 @@ function ZaklucakSmjene({data,persist,session,myLokal,addLog}) {
     // Posljednji zaključak ili početno stanje
     const prethodni=(data.zaklucakSmjene||[]).find(z=>z.lokacija===selLok&&z.datum===today()&&z.smjena==="jutarnja");
     // Stavke
-    const stavke=SVI_PROIZVODI.map(p=>{
+    const stavke=getSviP(data).map(p=>{
       const pocetno=prethodni?(prethodni.krajnjeStanje.find(s=>s.prodId===p.id)?.kolicina||0):0;
       const dostavljeno=dostavljenoMap[p.id]||0;
       const raspolozivo=pocetno+dostavljeno;
@@ -1094,7 +1102,7 @@ function ZaklucakSmjene({data,persist,session,myLokal,addLog}) {
         </div>
         <label style={{...S.label,marginBottom:8}}>📦 Unesite KRAJNJE stanje po artiklu (šta ostaje)</label>
         <div style={{maxHeight:380,overflowY:"auto",display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
-          {KATEGORIJE.map(kat=>{
+          {getKat(data).map(kat=>{
             const katItems=kat.proizvodi.filter(p=>{
               const stanje=(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija===selLok);
               const danasD=(data.dostave||[]).filter(d=>d.datum===today()&&d.lokacija===selLok);
@@ -1142,7 +1150,7 @@ function CijeneModal({data,persist}) {
         Cijene su potrebne za <b>kontrolu blagajne</b>. Ako nisu unesene, sistem broji samo količine.
       </div>
       <div style={{maxHeight:420,overflowY:"auto",marginBottom:14}}>
-        {KATEGORIJE.map(kat=>(
+        {getKat(data).map(kat=>(
           <div key={kat.id} style={{marginBottom:12}}>
             <div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:6}}>{kat.icon} {kat.naziv}</div>
             {kat.proizvodi.map(p=>(
@@ -1315,6 +1323,222 @@ function Otpremnice({data,persist,perms,session,addLog}) {
   );
 }
 
+
+
+// ── UPRAVLJANJE PROIZVODIMA ───────────────────────────────────────
+function UpravljanjeProizvodima({data,persist}) {
+  const kategorije = getKat(data);
+  const [showKat,setShowKat] = useState(false);
+  const [showProd,setShowProd] = useState(false);
+  const [editKat,setEditKat] = useState(null);   // null = novo, obj = edit
+  const [editProd,setEditProd] = useState(null);  // {katId, prod|null}
+  const [katForm,setKF] = useState({id:"",naziv:"",icon:"🍽️",boja:"#C8860A",direktna:false});
+  const [prodForm,setPF] = useState({id:"",naziv:""});
+  const [dragKat,setDragKat] = useState(null);
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  const saveKat = () => {
+    if(!katForm.naziv.trim()){alert("Unesite naziv kategorije!");return;}
+    let kat = [...kategorije];
+    if(editKat){
+      kat = kat.map(k=>k.id===editKat.id?{...k,...katForm,direktna:katForm.direktna==="true"||katForm.direktna===true}:k);
+    } else {
+      const newId = "kat_" + Date.now();
+      kat = [...kat, {id:newId, naziv:katForm.naziv, icon:katForm.icon, boja:katForm.boja, direktna:katForm.direktna==="true"||katForm.direktna===true, proizvodi:[]}];
+    }
+    persist({...data, kategorije:kat, stanjeLokala:rebuildStanje(kat, data.stanjeLokala)});
+    setShowKat(false); setEditKat(null);
+  };
+
+  const deleteKat = (katId) => {
+    const kat = kategorije.find(k=>k.id===katId);
+    if(!window.confirm(`Obrisati kategoriju "${kat?.naziv}" i sve njene proizvode? Ovo se ne može poništiti!`)) return;
+    persist({...data, kategorije: kategorije.filter(k=>k.id!==katId)});
+  };
+
+  const saveProd = () => {
+    if(!prodForm.naziv.trim()){alert("Unesite naziv proizvoda!");return;}
+    let kat = [...kategorije];
+    if(editProd.prod){
+      // edit existing
+      kat = kat.map(k=>k.id===editProd.katId ? {...k, proizvodi:k.proizvodi.map(p=>p.id===editProd.prod.id?{...p,naziv:prodForm.naziv}:p)} : k);
+    } else {
+      // new product
+      const newId = "p_" + Date.now();
+      kat = kat.map(k=>k.id===editProd.katId ? {...k, proizvodi:[...k.proizvodi,{id:newId,naziv:prodForm.naziv}]} : k);
+      // Add stanje entries for new product
+      const novoStanje = [...(data.stanjeLokala||[])];
+      Object.keys(LOKALI).forEach(lok=>{
+        novoStanje.push({id:Date.now()+Math.random(),prodId:newId,lokacija:lok,kolicina:0});
+      });
+      persist({...data, kategorije:kat, stanjeLokala:novoStanje});
+      setShowProd(false); setEditProd(null);
+      return;
+    }
+    persist({...data, kategorije:kat});
+    setShowProd(false); setEditProd(null);
+  };
+
+  const deleteProd = (katId, prodId) => {
+    const p = kategorije.find(k=>k.id===katId)?.proizvodi.find(x=>x.id===prodId);
+    if(!window.confirm(`Obrisati proizvod "${p?.naziv}"? Ovo briše i sva stanja za ovaj proizvod.`)) return;
+    const kat = kategorije.map(k=>k.id===katId?{...k,proizvodi:k.proizvodi.filter(x=>x.id!==prodId)}:k);
+    persist({...data, kategorije:kat, stanjeLokala:(data.stanjeLokala||[]).filter(s=>s.prodId!==prodId)});
+  };
+
+  const moveProd = (katId, prodId, dir) => {
+    const kat = kategorije.map(k=>{
+      if(k.id!==katId) return k;
+      const arr=[...k.proizvodi]; const i=arr.findIndex(x=>x.id===prodId);
+      const j=i+dir; if(j<0||j>=arr.length) return k;
+      [arr[i],arr[j]]=[arr[j],arr[i]];
+      return {...k,proizvodi:arr};
+    });
+    persist({...data,kategorije:kat});
+  };
+
+  const moveKat = (katId, dir) => {
+    const arr=[...kategorije]; const i=arr.findIndex(k=>k.id===katId);
+    const j=i+dir; if(j<0||j>=arr.length) return;
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+    persist({...data,kategorije:arr});
+  };
+
+  const resetToDefault = () => {
+    if(!window.confirm("Vratiti na originalni spisak proizvoda? Vaše izmjene bit će izgubljene!")) return;
+    persist({...data, kategorije:[], stanjeLokala:genStanje()});
+  };
+
+  // rebuild stanje for new kategorije
+  const rebuildStanje = (kat, existing) => {
+    const existing_ = existing||[];
+    const newSt = [...existing_];
+    kat.forEach(k=>k.proizvodi.forEach(p=>{
+      Object.keys(LOKALI).forEach(lok=>{
+        if(!existing_.find(s=>s.prodId===p.id&&s.lokacija===lok)){
+          newSt.push({id:Date.now()+Math.random(),prodId:p.id,lokacija:lok,kolicina:0});
+        }
+      });
+    }));
+    return newSt;
+  };
+
+  const IKONE = ["🥟","🥙","🥐","🍮","🥤","🍕","🥗","🧆","🍞","🥜","🧁","🍰","☕","🫙","🧃","🍫","🫓","🥧"];
+  const BOJE  = ["#C8860A","#8B4513","#C0392B","#1565C0","#107C41","#6A1B9A","#D4A017","#1C1A17","#E67E22","#2C3E50"];
+
+  const totalProizvodi = kategorije.reduce((s,k)=>s+k.proizvodi.length,0);
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      {/* Info bar */}
+      <div style={{background:"#FFF8DC",border:"1px solid #E8D5A0",borderRadius:12,padding:"14px 18px",fontSize:13,color:"#5A4A35",lineHeight:1.7}}>
+        <b>🛒 Upravljanje Proizvodima</b> — Dodajte, uredite ili obrišite kategorije i proizvode.<br/>
+        Promjene su odmah vidljive svim korisnicima. Trenutno: <b>{kategorije.length} kategorija</b>, <b>{totalProizvodi} proizvoda</b>.
+      </div>
+
+      {/* Action buttons */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+        <Btn icon="➕" label="Nova Kategorija" onClick={()=>{setEditKat(null);setKF({id:"",naziv:"",icon:"🍽️",boja:"#C8860A",direktna:false});setShowKat(true);}} color="#1C1A17"/>
+        <button onClick={resetToDefault} style={{...S.btn2,fontSize:12,padding:"9px 14px",color:"#C00000",background:"#FFF0F0",border:"1px solid #FFCCCC"}}>↺ Vrati na originalne proizvode</button>
+      </div>
+
+      {/* Categories list */}
+      {kategorije.map((kat,ki)=>(
+        <div key={kat.id} style={{background:"white",borderRadius:14,border:"1px solid #E8DECA",overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
+          {/* Category header */}
+          <div style={{background:"#1C1A17",padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:22}}>{kat.icon}</span>
+            <div style={{flex:1}}>
+              <span style={{color:"white",fontWeight:700,fontSize:15}}>{kat.naziv}</span>
+              <span style={{color:"rgba(255,255,255,.5)",fontSize:11,marginLeft:10}}>{kat.proizvodi.length} proizvoda</span>
+              {kat.direktna&&<Tag bg="#E8F5E9" color="#107C41" style={{marginLeft:8}}>📥 Direktna dostava</Tag>}
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>moveKat(kat.id,-1)} disabled={ki===0} style={{...S.btn2,background:"rgba(255,255,255,.1)",color:"white",border:"none",padding:"5px 8px",opacity:ki===0?.3:1}}>↑</button>
+              <button onClick={()=>moveKat(kat.id,+1)} disabled={ki===kategorije.length-1} style={{...S.btn2,background:"rgba(255,255,255,.1)",color:"white",border:"none",padding:"5px 8px",opacity:ki===kategorije.length-1?.3:1}}>↓</button>
+              <button onClick={()=>{setEditKat(kat);setKF({id:kat.id,naziv:kat.naziv,icon:kat.icon,boja:kat.boja,direktna:kat.direktna});setShowKat(true);}} style={{...S.btn2,background:"rgba(255,255,255,.15)",color:"white",border:"none",padding:"5px 10px",fontSize:13}}>✏️</button>
+              <button onClick={()=>deleteKat(kat.id)} style={{...S.btn2,background:"rgba(220,0,0,.2)",color:"#ffaaaa",border:"none",padding:"5px 10px",fontSize:13}}>🗑️</button>
+              <button onClick={()=>{setEditProd({katId:kat.id,prod:null});setPF({id:"",naziv:""});setShowProd(true);}} style={{background:"#E8A020",color:"white",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><span>➕</span> Dodaj Proizvod</button>
+            </div>
+          </div>
+          {/* Products list */}
+          <div style={{padding:"10px 12px"}}>
+            {kat.proizvodi.length===0&&<p style={{color:"#B0A090",fontSize:12,textAlign:"center",padding:"10px 0",fontStyle:"italic"}}>Nema proizvoda — kliknite "Dodaj Proizvod" iznad</p>}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8}}>
+              {kat.proizvodi.map((p,pi)=>(
+                <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"#FAFAF8",borderRadius:8,border:"1px solid #EEE2D0"}}>
+                  <span style={{fontSize:14,color:kat.boja,flexShrink:0}}>•</span>
+                  <span style={{flex:1,fontSize:13,fontWeight:600,color:"#1C1A17"}}>{p.naziv}</span>
+                  <div style={{display:"flex",gap:3,flexShrink:0}}>
+                    <button onClick={()=>moveProd(kat.id,p.id,-1)} disabled={pi===0} style={{background:"none",border:"none",cursor:"pointer",color:"#C8A050",padding:"2px 4px",opacity:pi===0?.3:1,fontSize:12}}>↑</button>
+                    <button onClick={()=>moveProd(kat.id,p.id,+1)} disabled={pi===kat.proizvodi.length-1} style={{background:"none",border:"none",cursor:"pointer",color:"#C8A050",padding:"2px 4px",opacity:pi===kat.proizvodi.length-1?.3:1,fontSize:12}}>↓</button>
+                    <button onClick={()=>{setEditProd({katId:kat.id,prod:p});setPF({naziv:p.naziv});setShowProd(true);}} style={{background:"none",border:"none",cursor:"pointer",color:"#C8A050",padding:"2px 5px",fontSize:14}}>✏️</button>
+                    <button onClick={()=>deleteProd(kat.id,p.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#C00000",padding:"2px 5px",fontSize:14}}>✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {kategorije.length===0&&(
+        <div style={{background:"white",borderRadius:14,border:"2px dashed #E8DECA",padding:"40px 20px",textAlign:"center"}}>
+          <div style={{fontSize:40,marginBottom:10}}>🛒</div>
+          <div style={{fontFamily:"Georgia,serif",fontSize:16,color:"#5A4A35",marginBottom:6}}>Nema kategorija</div>
+          <div style={{fontSize:13,color:"#9A8A75",marginBottom:16}}>Kliknite "Nova Kategorija" ili "Vrati na originalne" da počnete.</div>
+          <Btn icon="↺" label="Vrati originalne proizvode" onClick={resetToDefault} color="#C8860A"/>
+        </div>
+      )}
+
+      {/* Kategorija modal */}
+      {showKat&&<Modal title={editKat?"✏️ Uredi Kategoriju":"➕ Nova Kategorija"} onClose={()=>{setShowKat(false);setEditKat(null);}}>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div><label style={S.label}>Naziv Kategorije</label>
+            <input value={katForm.naziv} onChange={e=>setKF(f=>({...f,naziv:e.target.value}))} style={S.input} placeholder="npr. Mantije, Pite, Pića..."/></div>
+          <div><label style={S.label}>Ikona</label>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
+              {IKONE.map(ic=><button key={ic} onClick={()=>setKF(f=>({...f,icon:ic}))} style={{width:38,height:38,borderRadius:8,border:`2px solid ${katForm.icon===ic?"#E8A020":"#E8DECA"}`,background:katForm.icon===ic?"#FFF8DC":"white",fontSize:20,cursor:"pointer"}}>{ic}</button>)}
+              <input value={katForm.icon} onChange={e=>setKF(f=>({...f,icon:e.target.value}))} style={{...S.input,width:60,textAlign:"center",fontSize:20}} maxLength={2}/>
+            </div>
+          </div>
+          <div><label style={S.label}>Boja</label>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
+              {BOJE.map(b=><button key={b} onClick={()=>setKF(f=>({...f,boja:b}))} style={{width:32,height:32,borderRadius:"50%",border:`3px solid ${katForm.boja===b?"#1C1A17":"transparent"}`,background:b,cursor:"pointer"}}/>)}
+              <input type="color" value={katForm.boja} onChange={e=>setKF(f=>({...f,boja:e.target.value}))} style={{width:40,height:32,borderRadius:8,border:"1px solid #E8DECA",cursor:"pointer",padding:2}}/>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:12,background:"#F9F7F2",borderRadius:10,padding:"10px 14px"}}>
+            <input type="checkbox" id="direktna_cb" checked={katForm.direktna===true||katForm.direktna==="true"} onChange={e=>setKF(f=>({...f,direktna:e.target.checked}))} style={{width:18,height:18,cursor:"pointer"}}/>
+            <label htmlFor="direktna_cb" style={{cursor:"pointer",fontSize:13,color:"#1C1A17"}}>
+              <b>Direktna dostava</b> — roba stiže direktno od dobavljača u lokal (npr. Pića), ne prolazi kroz Proizvodnju
+            </label>
+          </div>
+          <div style={{background:"#E8F5E9",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#107C41"}}>
+            Pregled: <span style={{color:katForm.boja,fontWeight:700,fontSize:15}}>{katForm.icon} {katForm.naziv||"Nova kategorija"}</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,marginTop:18}}>
+          <Btn icon="💾" label="Sačuvaj Kategoriju" onClick={saveKat} color="#1C1A17" full/>
+          <Btn icon="✕" label="Otkaži" onClick={()=>{setShowKat(false);setEditKat(null);}} color="#7A6545" full/>
+        </div>
+      </Modal>}
+
+      {/* Proizvod modal */}
+      {showProd&&editProd&&<Modal title={editProd.prod?"✏️ Uredi Proizvod":"➕ Novi Proizvod"} onClose={()=>{setShowProd(false);setEditProd(null);}}>
+        <div style={{background:"#FFF8DC",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#5A4A35",marginBottom:14}}>
+          Kategorija: <b>{getKat(data).find(k=>k.id===editProd.katId)?.icon} {getKat(data).find(k=>k.id===editProd.katId)?.naziv}</b>
+        </div>
+        <label style={S.label}>Naziv Proizvoda</label>
+        <input value={prodForm.naziv} onChange={e=>setPF(f=>({...f,naziv:e.target.value}))} style={{...S.input,marginBottom:18,fontSize:16}} placeholder="npr. Mantija Špinat, Pita Tikva..." onKeyDown={e=>e.key==="Enter"&&saveProd()}/>
+        <div style={{display:"flex",gap:10}}>
+          <Btn icon="💾" label={editProd.prod?"Sačuvaj Izmjene":"Dodaj Proizvod"} onClick={saveProd} color="#1C1A17" full/>
+          <Btn icon="✕" label="Otkaži" onClick={()=>{setShowProd(false);setEditProd(null);}} color="#7A6545" full/>
+        </div>
+      </Modal>}
+    </div>
+  );
+}
 
 // ── SHARED UI ─────────────────────────────────────────────────────
 function Card({title,children}){return <div style={{background:"white",borderRadius:14,padding:"18px 20px",boxShadow:"0 2px 12px rgba(74,44,10,.07)",border:"1px solid #E8DECA"}}>{title&&<h3 style={{margin:"0 0 14px",fontFamily:"Georgia,serif",fontSize:14,color:"#1C1A17",borderBottom:"2px solid #E8D5A0",paddingBottom:10}}>{title}</h3>}{children}</div>;}
