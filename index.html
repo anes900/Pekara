@@ -259,7 +259,8 @@ const SEED = {
   stanjeLokala: genStanje(),
   dostave:[],evidencija:[],dnevnaProizvodnja:[],kretanja:[],popisi:[],
   dobavljaci:[],narudzbine:[],troskoviMesecni:[],activityLog:[],
-  nextId:{sirovine:16,dostave:1,evidencija:1,dnevnaPro:1,kretanja:1,popisi:1,dobavljaci:1,narudzbine:1},
+  zaklucakSmjene:[],otpremnice:[],cijene:{},
+  nextId:{sirovine:16,dostave:1,evidencija:1,dnevnaPro:1,kretanja:1,popisi:1,dobavljaci:1,narudzbine:1,zaklucak:1,otpremnica:1},
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -358,17 +359,18 @@ function App() {
   const myLokal = perms.lokal;
 
   const TABS = [
-    {key:"dashboard", icon:"📊",label:"Dashboard",         roles:["direktor"]},
-    {key:"dnevnapro", icon:"👨‍🍳",label:"Dnevna Proizvodnja",roles:["direktor","magacioner","radnik"]},
-    {key:"dostava",   icon:"🚚",label:"Dostava",            roles:["direktor","magacioner"]},
-    {key:"lokali",    icon:"🏪",label:"Stanje Lokala",      roles:["direktor","magacioner","prodavac1","prodavac2"]},
-    {key:"evidencija",icon:"📋",label:"Evidencija",         roles:["direktor","prodavac1","prodavac2"]},
-    {key:"popis",     icon:"🔢",label:"Popis Zaliha",       roles:["direktor","prodavac1","prodavac2"]},
-    {key:"sirovine",  icon:"🌾",label:"Sirovine",           roles:["direktor","magacioner"]},
-    {key:"troskovi",  icon:"💰",label:"Troškovi",           roles:["direktor"]},
-    {key:"dobavljaci",icon:"📦",label:"Dobavljači",         roles:["direktor","magacioner"]},
-    {key:"korisnici", icon:"🔑",label:"Korisnici & PIN",    roles:["direktor"]},
-    {key:"aktivnost", icon:"🕐",label:"Aktivnost",          roles:["direktor","magacioner","radnik","prodavac1","prodavac2"]},
+    {key:"dashboard",  icon:"📊", label:"Dashboard",          roles:["direktor"]},
+    {key:"dnevnapro",  icon:"👨‍🍳", label:"Dnevna Proizvodnja", roles:["direktor","magacioner","radnik"]},
+    {key:"dostava",    icon:"🚚", label:"Dostava",             roles:["direktor","magacioner"]},
+    {key:"lokali",     icon:"🏪", label:"Stanje Lokala",       roles:["direktor","magacioner","prodavac1","prodavac2"]},
+    {key:"evidencija", icon:"📋", label:"Evidencija",          roles:["direktor","prodavac1","prodavac2"]},
+    {key:"smjena",     icon:"🏁", label:"Zaključak Smjene",    roles:["direktor","prodavac1","prodavac2"]},
+    {key:"popis",      icon:"🔢", label:"Popis Zaliha",        roles:["direktor","prodavac1","prodavac2"]},
+    {key:"sirovine",   icon:"🌾", label:"Sirovine & Otpremnice", roles:["direktor","magacioner"]},
+    {key:"troskovi",   icon:"💰", label:"Troškovi",            roles:["direktor"]},
+    {key:"dobavljaci", icon:"📦", label:"Dobavljači",          roles:["direktor","magacioner"]},
+    {key:"korisnici",  icon:"🔑", label:"Korisnici & PIN",     roles:["direktor"]},
+    {key:"aktivnost",  icon:"🕐", label:"Aktivnost",           roles:["direktor","magacioner","radnik","prodavac1","prodavac2"]},
   ];
 
   const mojiTabovi = TABS.filter(t => t.roles.includes(session.uloga));
@@ -386,7 +388,8 @@ function App() {
           {validTab==="lokali"     && <StanjeLokala data={data} myLokal={myLokal} />}
           {validTab==="evidencija" && <Evidencija  data={data} persist={persist} session={session} myLokal={myLokal} addLog={addLog} />}
           {validTab==="popis"      && <Popis       data={data} persist={persist} session={session} myLokal={myLokal} addLog={addLog} />}
-          {validTab==="sirovine"   && <Sirovine    data={data} persist={persist} perms={perms} session={session} addLog={addLog} />}
+          {validTab==="smjena"     && <ZaklucakSmjene data={data} persist={persist} session={session} myLokal={myLokal} addLog={addLog} />}
+          {validTab==="sirovine"   && <SirovineOtpremnice data={data} persist={persist} perms={perms} session={session} addLog={addLog} />}
           {validTab==="troskovi"   && <Troskovi    data={data} persist={persist} perms={perms} />}
           {validTab==="dobavljaci" && <Dobavljaci  data={data} persist={persist} perms={perms} session={session} addLog={addLog} />}
           {validTab==="korisnici"  && <KorisniciTab korisnici={korisnici} persistUsers={persistUsers} />}
@@ -508,7 +511,7 @@ function TopBar({tab,tabs,saveSt,session,perms,myLokal}) {
 function KorisniciTab({korisnici,persistUsers}) {
   const [show,setShow]=useState(false); const [editId,setEdit]=useState(null);
   const [form,setF]=useState({ime:"",uloga:"prodavac1",pin:""}); const [sp,setSP]=useState({});
-  const pristup={direktor:["📊 Dashboard","👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","🌾 Sirovine","💰 Troškovi","📦 Dobavljači","🔑 Korisnici","🕐 Aktivnost"],magacioner:["👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","🌾 Sirovine","📦 Dobavljači","🕐 Aktivnost"],radnik:["👨‍🍳 Dnevna Prizv. (unos)","🕐 Aktivnost"],prodavac1:["🏪 Stanje Mama 1","📋 Evidencija","🔢 Popis","🕐 Aktivnost"],prodavac2:["🏪 Stanje Mama 2","📋 Evidencija","🔢 Popis","🕐 Aktivnost"]};
+  const pristup={direktor:["📊 Dashboard","👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","📋 Evidencija","🏁 Zaključak Smjene","🌾 Sirovine & Otpremnice","💰 Troškovi","📦 Dobavljači","🔑 Korisnici","🕐 Aktivnost"],magacioner:["👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","🌾 Sirovine & Otpremnice","📦 Dobavljači","🕐 Aktivnost"],radnik:["👨‍🍳 Dnevna Prizv. (unos)","🕐 Aktivnost"],prodavac1:["🏪 Stanje Mama 1","📋 Evidencija","🏁 Zaključak Smjene","🔢 Popis","🕐 Aktivnost"],prodavac2:["🏪 Stanje Mama 2","📋 Evidencija","🏁 Zaključak Smjene","🔢 Popis","🕐 Aktivnost"]};
   const saveK=()=>{if(!form.ime.trim()||form.pin.length<4){alert("Ime i PIN (min 4 cifre)!");return;}persistUsers(editId?korisnici.map(k=>k.id===editId?{...form,id:editId}:k):[...korisnici,{...form,id:Date.now()}]);setShow(false);setEdit(null);};
   return (
     <div style={{display:"flex",flexDirection:"column",gap:18}}>
@@ -572,6 +575,34 @@ function Dashboard({data}) {
       {chart.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16}}>
         <Card title="📊 Prihod vs Troškovi"><ResponsiveContainer width="100%" height={200}><BarChart data={chart}><CartesianGrid strokeDasharray="3 3" stroke="#E8DECA"/><XAxis dataKey="mesec" tick={{fontSize:10}}/><YAxis tick={{fontSize:9}} tickFormatter={v=>(v/1000).toFixed(0)+"k"}/><Tooltip formatter={v=>fmtN(v)+" RSD"}/><Legend iconSize={10} wrapperStyle={{fontSize:11}}/><Bar dataKey="prihod" fill="#107C41" name="Prihod" radius={[3,3,0,0]}/><Bar dataKey="troskovi" fill="#C0392B" name="Troškovi" radius={[3,3,0,0]}/><Bar dataKey="profit" fill="#E8A020" name="Profit" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></Card>
       </div>}
+      {/* Zaključci danas */}
+      {(data.zaklucakSmjene||[]).filter(z=>z.datum===today()).length>0&&(
+        <Card title="🏁 Zaključci Smjene — Danas">
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:14}}>
+            {(data.zaklucakSmjene||[]).filter(z=>z.datum===today()).map(z=>{
+              const lok=LOKALI[z.lokacija];
+              const prodUk=z.stavke.reduce((s,x)=>s+(x.prodano||0),0);
+              const razBoja=Math.abs(z.razlika)<50?"#107C41":z.razlika>0?"#1565C0":"#C00000";
+              return(
+                <div key={z.id} style={{background:"white",borderRadius:12,padding:"14px 16px",border:`2px solid ${lok.boja}22`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                    <span style={{fontSize:22}}>{z.smjena==="jutarnja"?"☀️":"🌙"}</span>
+                    <div><div style={{fontWeight:700,color:lok.boja,fontSize:14}}>{lok.icon} {lok.naziv}</div><div style={{fontSize:11,color:"#7A6545"}}>{z.smjena==="jutarnja"?"Jutarnja":"Poslijepodnevna"} · {z.korisnik}</div></div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 10px",textAlign:"center"}}><div style={{fontWeight:800,fontSize:20,color:"#107C41"}}>{fmtN(prodUk)}</div><div style={{fontSize:10,color:"#5A4A35"}}>Prodano (kom)</div></div>
+                    <div style={{background:"#FFF8DC",borderRadius:8,padding:"8px 10px",textAlign:"center"}}><div style={{fontWeight:800,fontSize:16,color:"#C8860A"}}>{fmtN(z.blagajna)}</div><div style={{fontSize:10,color:"#5A4A35"}}>Blagajna (RSD)</div></div>
+                  </div>
+                  <div style={{marginTop:8,padding:"6px 10px",borderRadius:8,background:Math.abs(z.razlika)<50?"#E8F5E9":z.razlika>0?"#EFF6FF":"#FFF0F0",fontSize:12,fontWeight:700,color:razBoja,textAlign:"center"}}>
+                    {Math.abs(z.razlika)<50?"✅ Blagajna tačna":z.razlika>0?`💙 Višak: +${fmtN(z.razlika)} RSD`:`⚠️ Manjak: ${fmtN(Math.abs(z.razlika))} RSD`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       <Card title="🕐 Poslijednje Aktivnosti">
         {(data.activityLog||[]).length===0?<p style={{color:"#7A6545",fontSize:13,textAlign:"center",padding:16}}>Nema aktivnosti.</p>:(data.activityLog||[]).slice(0,8).map((a,i)=><div key={i} style={{display:"flex",gap:10,padding:"8px 12px",background:i%2===0?"white":"#FAF6EE",borderRadius:8,fontSize:12}}><span>{ULOGE[a.uloga]?.icon}</span><span style={{fontWeight:700,color:"#C8860A"}}>{a.user}</span><span style={{color:"#5A4A35",flex:1}}>{a.action}</span><span style={{color:"#C8A050",whiteSpace:"nowrap",fontSize:10}}>{a.vreme}</span></div>)}
       </Card>
@@ -878,6 +909,412 @@ function Aktivnost({data,session}) {
   const log=(data.activityLog||[]).filter(a=>["direktor","magacioner"].includes(session.uloga)?true:a.user===session.ime);
   return(<Card title="🕐 Evidencija Aktivnosti">{log.length===0?<p style={{textAlign:"center",padding:30,color:"#7A6545"}}>Nema aktivnosti.</p>:log.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"10px 14px",background:i%2===0?"white":"#FAF6EE",borderRadius:10,border:"1px solid #E8DECA",marginBottom:6}}><span style={{fontSize:18}}>{ULOGE[a.uloga]?.icon||"👤"}</span><div style={{flex:1}}><span style={{fontWeight:700,color:"#C8860A"}}>{a.user}</span><span style={{fontSize:11,color:"#7A6545",marginLeft:6}}>({ULOGE[a.uloga]?.label||a.uloga})</span><div style={{color:"#5A4A35",fontSize:13,marginTop:2}}>{a.action}</div></div><div style={{color:"#C8A050",fontSize:10,whiteSpace:"nowrap"}}>{a.vreme}</div></div>)}</Card>);
 }
+
+
+// ── ZAKLJUČAK SMJENE ────────────────────────────────────────────
+function ZaklucakSmjene({data,persist,session,myLokal,addLog}) {
+  const [show,setShow]=useState(false);
+  const [selLok,setSelL]=useState(myLokal&&myLokal!=="proizvodnja"?myLokal:"mama1");
+  const [krajnje,setKraj]=useState({});
+  const [blagajna,setBlag]=useState("");
+  const [printData,setPrint]=useState(null);
+  const lokovi=myLokal&&myLokal!=="proizvodnja"?[myLokal]:["mama1","mama2"];
+
+  const startZakljucak=(lok)=>{
+    setSelL(lok);
+    const kd={};
+    SVI_PROIZVODI.forEach(p=>{kd[p.id]="";});
+    setKraj(kd);
+    setBlag("");
+    setShow(true);
+  };
+
+  const save=()=>{
+    if(!blagajna&&blagajna!=="0"){alert("Unesite iznos blagajne!");return;}
+    const lok=LOKALI[selLok];
+    // Računa dostavljeno danas u ovaj lokal
+    const danasD=(data.dostave||[]).filter(d=>d.datum===today()&&d.lokacija===selLok);
+    const dostavljenoMap={};
+    danasD.forEach(d=>d.stavke.forEach(s=>{dostavljenoMap[s.prodId]=(dostavljenoMap[s.prodId]||0)+s.kolicina;}));
+    // Posljednji zaključak ili početno stanje
+    const prethodni=(data.zaklucakSmjene||[]).find(z=>z.lokacija===selLok&&z.datum===today()&&z.smjena==="jutarnja");
+    // Stavke
+    const stavke=SVI_PROIZVODI.map(p=>{
+      const pocetno=prethodni?(prethodni.krajnjeStanje.find(s=>s.prodId===p.id)?.kolicina||0):0;
+      const dostavljeno=dostavljenoMap[p.id]||0;
+      const raspolozivo=pocetno+dostavljeno;
+      const krajnjeVal=krajnje[p.id]!==""?+krajnje[p.id]:null;
+      const prodano=krajnjeVal!==null?Math.max(0,raspolozivo-krajnjeVal):null;
+      const cena=data.cijene?.[p.id]||0;
+      return{prodId:p.id,naziv:p.naziv,kat:p.kat,pocetno,dostavljeno,raspolozivo,krajnje:krajnjeVal,prodano,cena,promet:prodano?prodano*cena:0};
+    }).filter(s=>s.raspolozivo>0||s.krajnje!==null);
+    const ukPromet=stavke.reduce((s,x)=>s+x.promet,0);
+    const blagajnaNum=+blagajna;
+    const razlika=blagajnaNum-ukPromet;
+    const smjena=(data.zaklucakSmjene||[]).some(z=>z.lokacija===selLok&&z.datum===today()&&z.smjena==="jutarnja")?"poslijepodnevna":"jutarnja";
+    const zak={
+      id:data.nextId.zaklucak,lokacija:selLok,lokNaziv:lok.naziv,datum:today(),vreme:nowStr(),
+      smjena,stavke,blagajna:blagajnaNum,ocekivaniPromet:ukPromet,razlika,
+      krajnjeStanje:stavke.map(s=>({prodId:s.prodId,kolicina:s.krajnje!==null?s.krajnje:s.raspolozivo})),
+      korisnik:session.ime
+    };
+    // Ažurira stanje lokala sa krajnjim stanjem
+    let ns=[...(data.stanjeLokala||[])];
+    stavke.forEach(s=>{if(s.krajnje!==null){ns=ns.map(x=>x.prodId===s.prodId&&x.lokacija===selLok?{...x,kolicina:s.krajnje}:x);}});
+    persist(addLog({...data,stanjeLokala:ns,zaklucakSmjene:[zak,...(data.zaklucakSmjene||[])],nextId:{...data.nextId,zaklucak:data.nextId.zaklucak+1}},`Zaključak ${smjena} smjene — ${lok.naziv}`));
+    setShow(false);
+    setPrint(zak);
+  };
+
+  const printZakljucak=(zak)=>{
+    const lok=LOKALI[zak.lokacija];
+    const win=window.open("","_blank","width=800,height=900");
+    const prodanoUk=zak.stavke.reduce((s,x)=>s+(x.prodano||0),0);
+    const rows=zak.stavke.filter(s=>s.raspolozivo>0||s.prodano).map(s=>`
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:6px 8px;">${s.naziv}</td>
+        <td style="padding:6px 8px;text-align:center;">${s.pocetno}</td>
+        <td style="padding:6px 8px;text-align:center;color:#1565C0;">${s.dostavljeno}</td>
+        <td style="padding:6px 8px;text-align:center;font-weight:700;">${s.raspolozivo}</td>
+        <td style="padding:6px 8px;text-align:center;">${s.krajnje!==null?s.krajnje:"—"}</td>
+        <td style="padding:6px 8px;text-align:center;font-weight:800;color:${(s.prodano||0)>0?"#107C41":"#999"};">${s.prodano!==null?s.prodano:"—"}</td>
+        <td style="padding:6px 8px;text-align:right;">${s.cena>0?s.promet.toLocaleString()+" RSD":"—"}</td>
+      </tr>`).join("");
+    const razlikaColor=Math.abs(zak.razlika)<50?"#107C41":zak.razlika>0?"#1565C0":"#C00000";
+    const razlikaText=zak.razlika>0?`Višak: +${zak.razlika.toLocaleString()} RSD`:zak.razlika<0?`Manjak: ${zak.razlika.toLocaleString()} RSD`:"Tačno ✓";
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Mama Mantia — Zaključak Smjene</title>
+    <style>body{font-family:'Segoe UI',sans-serif;margin:0;padding:24px;color:#1C1A17}
+    h1{font-family:Georgia,serif;font-size:22px;margin:0 0 4px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #E8A020;padding-bottom:14px;margin-bottom:18px}
+    .logo{font-family:Georgia,serif;font-size:28px;font-weight:700;font-style:italic;color:#1C1A17}
+    .logo span{color:#C8860A}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    thead tr{background:#1C1A17;color:white}
+    th{padding:8px;text-align:left;font-weight:600;font-size:11px}
+    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}
+    .kpi-box{background:#f9f7f2;border:1px solid #e8d5a0;border-radius:10px;padding:12px;text-align:center}
+    .kpi-val{font-size:20px;font-weight:800;font-family:Georgia,serif}
+    .kpi-lbl{font-size:10px;color:#7A6545;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+    .footer{margin-top:20px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:12px}
+    @media print{body{padding:10px}.no-print{display:none}}
+    </style></head><body>
+    <div class="header">
+      <div><div class="logo">Mama <span>🥟</span> Mantia</div>
+      <div style="font-size:12px;color:#7A6545;margin-top:4px">Novi Pazar</div></div>
+      <div style="text-align:right">
+        <div style="font-size:18px;font-weight:700">${lok.icon} ${zak.lokNaziv}</div>
+        <div style="font-size:13px;color:#7A6545;">${zak.datum} · ${zak.smjena==="jutarnja"?"☀️ Jutarnja":"🌙 Poslijepodnevna"} smjena</div>
+        <div style="font-size:12px;color:#999">Zaključio: ${zak.korisnik} · ${zak.vreme}</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-box"><div class="kpi-val" style="color:#1C1A17">${prodanoUk}</div><div class="kpi-lbl">Ukupno prodano (kom)</div></div>
+      <div class="kpi-box"><div class="kpi-val" style="color:#C8860A">${zak.ocekivaniPromet.toLocaleString()} RSD</div><div class="kpi-lbl">Očekivani promet</div></div>
+      <div class="kpi-box"><div class="kpi-val" style="color:#1565C0">${zak.blagajna.toLocaleString()} RSD</div><div class="kpi-lbl">Blagajna (uplaćeno)</div></div>
+      <div class="kpi-box"><div class="kpi-val" style="color:${razlikaColor}">${razlikaText}</div><div class="kpi-lbl">Kontrola blagajne</div></div>
+    </div>
+    <table><thead><tr>
+      <th>Artikal</th><th style="text-align:center">Početno</th><th style="text-align:center">Dostavljeno</th>
+      <th style="text-align:center">Raspoloživo</th><th style="text-align:center">Krajnje</th>
+      <th style="text-align:center">Prodano</th><th style="text-align:right">Promet</th>
+    </tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr style="background:#f9f7f2;font-weight:700;border-top:2px solid #1C1A17">
+      <td style="padding:8px">UKUPNO</td><td></td><td></td><td></td><td></td>
+      <td style="padding:8px;text-align:center;font-size:16px;color:#107C41">${prodanoUk}</td>
+      <td style="padding:8px;text-align:right;font-size:14px;color:#C8860A">${zak.ocekivaniPromet.toLocaleString()} RSD</td>
+    </tr></tfoot></table>
+    <div style="background:${Math.abs(zak.razlika)<50?"#E8F5E9":zak.razlika>0?"#EFF6FF":"#FFF0F0"};border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+      <div><b>Kontrola blagajne</b></div>
+      <div style="display:flex;gap:24px;font-size:13px">
+        <span>Blagajna: <b>${zak.blagajna.toLocaleString()} RSD</b></span>
+        <span>Sistem: <b>${zak.ocekivaniPromet.toLocaleString()} RSD</b></span>
+        <span style="font-weight:800;font-size:15px;color:${razlikaColor}">${razlikaText}</span>
+      </div>
+    </div>
+    <div class="footer">Mama Mantia · Sistem Upravljanja · ${zak.datum}</div>
+    <div class="no-print" style="margin-top:20px;text-align:center">
+      <button onclick="window.print()" style="background:#1C1A17;color:white;border:none;padding:12px 32px;border-radius:10px;font-size:15px;cursor:pointer;font-family:Georgia,serif">🖨️ Štampaj / Sačuvaj PDF</button>
+      <button onclick="window.close()" style="background:#eee;color:#333;border:none;padding:12px 24px;border-radius:10px;font-size:15px;cursor:pointer;margin-left:10px">Zatvori</button>
+    </div>
+    </body></html>`);
+    win.document.close();
+  };
+
+  const sveSmjene=(data.zaklucakSmjene||[]);
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      <div style={{background:"#FFF8DC",border:"1px solid #E8D5A0",borderRadius:12,padding:"14px 18px",fontSize:13,color:"#5A4A35",lineHeight:1.7}}>
+        <b>🏁 Zaključak smjene</b> automatski računa:<br/>
+        <b>Prodano</b> = Početno stanje + Dostavljeno danas − Krajnje stanje<br/>
+        <b>Kontrola blagajne</b> = Uplaćena blagajna vs Promet po sistemu
+      </div>
+
+      {/* Cijene po artiklu — samo za direktora */}
+      {session.uloga==="direktor"&&<CijeneModal data={data} persist={persist} />}
+
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        {lokovi.map(l=><Btn key={l} icon="🏁" label={`Zaključak — ${LOKALI[l].naziv}`} onClick={()=>startZakljucak(l)} color="#1C1A17"/>)}
+      </div>
+
+      {/* Historija zaključaka */}
+      <Card title="📋 Historija Zaključaka">
+        {sveSmjene.length===0?<p style={{color:"#7A6545",fontSize:13,textAlign:"center",padding:20}}>Nema zaključaka.</p>:
+        sveSmjene.slice(0,20).map((z,i)=>{
+          const lok=LOKALI[z.lokacija];
+          const prodUk=z.stavke.reduce((s,x)=>s+(x.prodano||0),0);
+          const razBoja=Math.abs(z.razlika)<50?"#107C41":z.razlika>0?"#1565C0":"#C00000";
+          return(
+          <div key={z.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:i%2===0?"white":"#FAF6EE",borderRadius:10,border:"1px solid #E8DECA",marginBottom:6}}>
+            <div style={{fontSize:22}}>{z.smjena==="jutarnja"?"☀️":"🌙"}</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                <Tag bg={lok.bg} color={lok.boja}>{lok.icon} {lok.naziv}</Tag>
+                <Tag bg="#FAF6EE" color="#1C1A17">{z.datum}</Tag>
+                <Tag bg="#FFF8DC" color="#C8860A">{z.smjena==="jutarnja"?"Jutarnja":"Poslijepodnevna"}</Tag>
+              </div>
+              <div style={{display:"flex",gap:16,fontSize:12,flexWrap:"wrap"}}>
+                <span>📦 Prodano: <b style={{color:"#107C41"}}>{prodUk} kom</b></span>
+                <span>💰 Blagajna: <b>{z.blagajna?.toLocaleString()} RSD</b></span>
+                <span>📊 Sistem: <b>{z.ocekivaniPromet?.toLocaleString()} RSD</b></span>
+                <span style={{fontWeight:700,color:razBoja}}>{Math.abs(z.razlika)<50?"✅ Tačno":z.razlika>0?`💙 Višak: +${z.razlika} RSD`:`⚠️ Manjak: ${z.razlika} RSD`}</span>
+              </div>
+            </div>
+            <button onClick={()=>printZakljucak(z)} style={{...S.btn2,background:"#1C1A17",color:"white",padding:"8px 14px",fontSize:12,borderRadius:8,border:"none"}}>🖨️ PDF</button>
+          </div>);
+        })}
+      </Card>
+
+      {show&&<Modal title={`🏁 Zaključak Smjene — ${LOKALI[selLok].naziv}`} onClose={()=>setShow(false)}>
+        <div style={{background:"#FFF8DC",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#5A4A35",fontWeight:600,marginBottom:14}}>
+          📅 {today()} · {(data.zaklucakSmjene||[]).some(z=>z.lokacija===selLok&&z.datum===today()&&z.smjena==="jutarnja")?"🌙 Poslijepodnevna smjena":"☀️ Jutarnja smjena"} · {session.ime}
+        </div>
+        <div style={{marginBottom:14}}>
+          <label style={S.label}>💵 Blagajna — uplaćeno u kasi (RSD)</label>
+          <input type="number" value={blagajna} onChange={e=>setBlag(e.target.value)} style={{...S.input,fontSize:20,textAlign:"right",fontWeight:700}} placeholder="0"/>
+        </div>
+        <label style={{...S.label,marginBottom:8}}>📦 Unesite KRAJNJE stanje po artiklu (šta ostaje)</label>
+        <div style={{maxHeight:380,overflowY:"auto",display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
+          {KATEGORIJE.map(kat=>{
+            const katItems=kat.proizvodi.filter(p=>{
+              const stanje=(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija===selLok);
+              const danasD=(data.dostave||[]).filter(d=>d.datum===today()&&d.lokacija===selLok);
+              const dostMap={};danasD.forEach(d=>d.stavke.forEach(s=>{dostMap[s.prodId]=(dostMap[s.prodId]||0)+s.kolicina;}));
+              return (stanje?.kolicina||0)+(dostMap[p.id]||0)>0;
+            });
+            if(!katItems.length)return null;
+            return(<div key={kat.id}><div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:5,paddingTop:6,borderTop:"1px solid #F0E6D8"}}>{kat.icon} {kat.naziv}</div>
+              {katItems.map(p=>{
+                const stanje=(data.stanjeLokala||[]).find(s=>s.prodId===p.id&&s.lokacija===selLok);
+                const danasD=(data.dostave||[]).filter(d=>d.datum===today()&&d.lokacija===selLok);
+                const dostMap={};danasD.forEach(d=>d.stavke.forEach(s=>{dostMap[s.prodId]=(dostMap[s.prodId]||0)+s.kolicina;}));
+                const raspolozivo=(stanje?.kolicina||0)+(dostMap[p.id]||0);
+                const kv=krajnje[p.id];
+                const prodano=kv!==""&&kv!==undefined?Math.max(0,raspolozivo-+kv):null;
+                return(
+                <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#FFFDF5",borderRadius:8,border:"1px solid #E8DECA",marginBottom:4}}>
+                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{p.naziv}</div><div style={{fontSize:11,color:"#7A6545"}}>Raspoloživo: <b>{raspolozivo}</b></div></div>
+                  <input type="number" min="0" max={raspolozivo} value={krajnje[p.id]||""} onChange={e=>setKraj(k=>({...k,[p.id]:e.target.value}))} style={{...S.input,width:80,textAlign:"right"}} placeholder="0"/>
+                  {prodano!==null&&<div style={{width:70,textAlign:"right"}}><div style={{fontSize:10,color:"#7A6545"}}>Prodano</div><div style={{fontWeight:800,fontSize:16,color:prodano>0?"#107C41":"#999"}}>{prodano}</div></div>}
+                </div>);
+              })}
+            </div>);
+          })}
+        </div>
+        <div style={{background:"#E8F5E9",borderRadius:10,padding:"10px 14px",fontSize:13,marginBottom:14,display:"flex",justifyContent:"space-between"}}>
+          <span>📦 Ukupno prodano: <b>{Object.entries(krajnje).reduce((s,[id,v])=>{if(v==="")return s;const st=(data.stanjeLokala||[]).find(x=>x.prodId===id&&x.lokacija===selLok);const dd=(data.dostave||[]).filter(d=>d.datum===today()&&d.lokacija===selLok);const dm={};dd.forEach(d=>d.stavke.forEach(ss=>{dm[ss.prodId]=(dm[ss.prodId]||0)+ss.kolicina;}));const r=(st?.kolicina||0)+(dm[id]||0);return s+Math.max(0,r-+v);},0)} kom</b></span>
+          {blagajna&&<span>💵 Blagajna: <b>{Number(blagajna).toLocaleString()} RSD</b></span>}
+        </div>
+        <div style={{display:"flex",gap:10}}><Btn icon="🏁" label="Zaključi Smjenu" onClick={save} color="#1C1A17" full/><Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/></div>
+      </Modal>}
+    </div>
+  );
+}
+
+// ── CIJENE MODAL (za direktora) ───────────────────────────────────
+function CijeneModal({data,persist}) {
+  const [show,setShow]=useState(false);
+  const [cijene,setCijene]=useState({});
+  const openCijene=()=>{setCijene(data.cijene||{});setShow(true);};
+  const save=()=>{persist({...data,cijene});setShow(false);};
+  if(show)return(
+    <Modal title="💵 Maloprodajne Cijene" onClose={()=>setShow(false)}>
+      <div style={{background:"#FFF8DC",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#5A4A35",marginBottom:14}}>
+        Cijene su potrebne za <b>kontrolu blagajne</b>. Ako nisu unesene, sistem broji samo količine.
+      </div>
+      <div style={{maxHeight:420,overflowY:"auto",marginBottom:14}}>
+        {KATEGORIJE.map(kat=>(
+          <div key={kat.id} style={{marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:6}}>{kat.icon} {kat.naziv}</div>
+            {kat.proizvodi.map(p=>(
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
+                <span style={{flex:1,fontSize:13}}>{p.naziv}</span>
+                <input type="number" value={cijene[p.id]||""} onChange={e=>setCijene(c=>({...c,[p.id]:+e.target.value}))} style={{...S.input,width:100,textAlign:"right"}} placeholder="0 RSD"/>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:10}}><Btn icon="💾" label="Sačuvaj Cijene" onClick={save} color="#1C1A17" full/><Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/></div>
+    </Modal>
+  );
+  return(<button onClick={openCijene} style={{...S.btn2,fontSize:12,padding:"8px 14px",display:"flex",alignItems:"center",gap:6}}>💵 Postavi Maloprodajne Cijene</button>);
+}
+
+// ── SIROVINE + OTPREMNICE ─────────────────────────────────────────
+function SirovineOtpremnice({data,persist,perms,session,addLog}) {
+  const [activeTab,setActiveTab]=useState("sirovine");
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:0}}>
+      <div style={{display:"flex",gap:0,marginBottom:18,background:"white",borderRadius:12,padding:6,border:"1px solid #E8DECA",alignSelf:"flex-start"}}>
+        {[{k:"sirovine",icon:"🌾",l:"Sirovine & Zalihe"},{k:"otpremnice",icon:"📄",l:"Otpremnice"}].map(t=>(
+          <button key={t.k} onClick={()=>setActiveTab(t.k)} style={{padding:"9px 18px",borderRadius:8,border:"none",background:activeTab===t.k?"#1C1A17":"transparent",color:activeTab===t.k?"white":"#5A4A35",fontWeight:activeTab===t.k?700:400,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",gap:6}}>{t.icon} {t.l}</button>
+        ))}
+      </div>
+      {activeTab==="sirovine"&&<Sirovine data={data} persist={persist} perms={perms} session={session} addLog={addLog}/>}
+      {activeTab==="otpremnice"&&<Otpremnice data={data} persist={persist} perms={perms} session={session} addLog={addLog}/>}
+    </div>
+  );
+}
+
+// ── OTPREMNICE ────────────────────────────────────────────────────
+function Otpremnice({data,persist,perms,session,addLog}) {
+  const [show,setShow]=useState(false);
+  const [form,setF]=useState({dobId:"",brOtpremnice:"",napomena:"",datum:today()});
+  const [stavke,setSt]=useState([{siroId:"",kolicina:"",cena:""}]);
+
+  const addStavka=()=>setSt(s=>[...s,{siroId:"",kolicina:"",cena:""}]);
+  const removeStavka=i=>setSt(s=>s.filter((_,idx)=>idx!==i));
+  const updStavka=(i,field,val)=>setSt(s=>s.map((x,idx)=>idx===i?{...x,[field]:val}:x));
+
+  const save=()=>{
+    const validStavke=stavke.filter(s=>s.siroId&&+s.kolicina>0);
+    if(!validStavke.length){alert("Dodajte barem jednu stavku!");return;}
+    const dob=(data.dobavljaci||[]).find(d=>d.id===+form.dobId);
+    if(!dob&&form.dobId){alert("Odaberite dobavljača!");return;}
+    // Ažurira stanje sirovina
+    let noveSirovine=[...(data.sirovine||[])];
+    validStavke.forEach(s=>{
+      noveSirovine=noveSirovine.map(sir=>sir.id===+s.siroId?{...sir,kolicina:sir.kolicina+(+s.kolicina),cena:+s.cena>0?+s.cena:sir.cena}:sir);
+    });
+    // Kretanja
+    const novaKretanja=validStavke.map((s,idx)=>{
+      const sir=noveSirovine.find(x=>x.id===+s.siroId);
+      return{id:data.nextId.kretanja+idx,siroId:+s.siroId,naziv:sir?.naziv||"?",vrsta:"ULAZ",kolicina:+s.kolicina,cena:+s.cena||sir?.cena||0,vrednost:(+s.kolicina)*(+s.cena||sir?.cena||0),datum:form.datum,vreme:nowStr(),korisnik:session.ime,napomena:`Otpremnica ${form.brOtpremnice}`};
+    });
+    const ukupno=validStavke.reduce((s,st)=>s+(+st.kolicina)*(+st.cena||0),0);
+    const otp={
+      id:data.nextId.otpremnica,
+      brOtpremnice:form.brOtpremnice,
+      dobavljacId:+form.dobId||null,
+      dobavljacNaziv:dob?.naziv||"Bez dobavljača",
+      datum:form.datum,vreme:nowStr(),
+      stavke:validStavke.map(s=>{const sir=(data.sirovine||[]).find(x=>x.id===+s.siroId);return{siroId:+s.siroId,naziv:sir?.naziv||"?",jm:sir?.jm||"",kolicina:+s.kolicina,cena:+s.cena||0,vrednost:(+s.kolicina)*(+s.cena||0)};}),
+      ukupno,napomena:form.napomena,korisnik:session.ime
+    };
+    persist(addLog({...data,sirovine:noveSirovine,otpremnice:[otp,...(data.otpremnice||[])],kretanja:[...novaKretanja,...(data.kretanja||[])],nextId:{...data.nextId,otpremnica:data.nextId.otpremnica+1,kretanja:data.nextId.kretanja+validStavke.length}},`Otpremnica ${form.brOtpremnice||"#"+data.nextId.otpremnica} — ${dob?.naziv||"?"}`));
+    setShow(false);setSt([{siroId:"",kolicina:"",cena:""}]);setF({dobId:"",brOtpremnice:"",napomena:"",datum:today()});
+  };
+
+  const printOtp=(o)=>{
+    const win=window.open("","_blank","width=700,height=800");
+    const rows=o.stavke.map(s=>`<tr><td style="padding:7px 10px;border-bottom:1px solid #eee">${s.naziv}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;text-align:center">${s.kolicina} ${s.jm}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;text-align:right">${s.cena>0?s.cena.toLocaleString()+" RSD":"—"}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;text-align:right;font-weight:700">${s.vrednost>0?s.vrednost.toLocaleString()+" RSD":"—"}</td></tr>`).join("");
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Otpremnica ${o.brOtpremnice}</title>
+    <style>body{font-family:'Segoe UI',sans-serif;padding:24px;color:#1C1A17}
+    .logo{font-family:Georgia,serif;font-size:24px;font-style:italic;color:#1C1A17}
+    .logo span{color:#C8860A}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    thead tr{background:#1C1A17;color:white}
+    th{padding:8px 10px;text-align:left;font-size:11px}
+    @media print{.no-print{display:none}}</style></head><body>
+    <div style="display:flex;justify-content:space-between;border-bottom:3px solid #E8A020;padding-bottom:14px;margin-bottom:20px">
+      <div><div class="logo">Mama <span>🥟</span> Mantia</div><div style="font-size:11px;color:#7A6545;margin-top:2px">Novi Pazar</div></div>
+      <div style="text-align:right"><div style="font-size:20px;font-weight:700">OTPREMNICA</div>
+      <div style="font-size:13px;color:#7A6545">Br: <b>${o.brOtpremnice||o.id}</b> · ${o.datum}</div>
+      <div style="font-size:12px;color:#999">Dobavljač: ${o.dobavljacNaziv}</div></div>
+    </div>
+    <table><thead><tr><th>Sirovina</th><th style="text-align:center">Količina</th><th style="text-align:right">Cena/jm</th><th style="text-align:right">Vrednost</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr style="background:#f9f7f2;font-weight:700"><td style="padding:8px 10px" colspan="3">UKUPNO</td><td style="padding:8px 10px;text-align:right;font-size:15px;color:#C8860A">${o.ukupno>0?o.ukupno.toLocaleString()+" RSD":"—"}</td></tr></tfoot>
+    </table>
+    ${o.napomena?`<div style="margin-top:14px;background:#f9f7f2;padding:10px 14px;border-radius:8px;font-size:13px"><b>Napomena:</b> ${o.napomena}</div>`:""}
+    <div style="margin-top:16px;font-size:11px;color:#999">Primio: ${o.korisnik} · ${o.vreme}</div>
+    <div class="no-print" style="margin-top:20px;text-align:center">
+      <button onclick="window.print()" style="background:#1C1A17;color:white;border:none;padding:12px 32px;border-radius:10px;font-size:15px;cursor:pointer">🖨️ Štampaj / PDF</button>
+      <button onclick="window.close()" style="background:#eee;color:#333;border:none;padding:12px 24px;border-radius:10px;font-size:15px;cursor:pointer;margin-left:10px">Zatvori</button>
+    </div></body></html>`);
+    win.document.close();
+  };
+
+  const listaZaDopunu=(data.sirovine||[]).filter(s=>s.min>0&&s.kolicina<=s.min);
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      {listaZaDopunu.length>0&&(
+        <div style={{background:"#FFF0F0",border:"2px solid #FFCCCC",borderRadius:12,padding:"14px 18px"}}>
+          <div style={{fontWeight:700,fontSize:14,color:"#C00000",marginBottom:10}}>⚠️ Lista Dopune — Sirovine ispod minimuma</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+            {listaZaDopunu.map(s=>(
+              <div key={s.id} style={{background:"white",borderRadius:8,padding:"8px 12px",border:"1px solid #FFCCCC"}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#C00000"}}>{s.naziv}</div>
+                <div style={{fontSize:12,color:"#5A4A35",marginTop:2}}>Stanje: <b>{s.kolicina} {s.jm}</b> · Min: <b>{s.min} {s.jm}</b></div>
+                <div style={{fontSize:11,color:"#C00000",fontWeight:600}}>Nedostaje: {Math.max(0,s.min-s.kolicina)} {s.jm}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {perms.canEdit&&<div><Btn icon="📄" label="Nova Otpremnica (Prijem Robe)" onClick={()=>setShow(true)} color="#1C1A17"/></div>}
+      <Card title="📋 Arhiva Otpremnica">
+        {(data.otpremnice||[]).length===0?<p style={{color:"#7A6545",fontSize:13,textAlign:"center",padding:20}}>Nema otpremnica. Unesite prvu otpremnicu klikom iznad.</p>:
+        (data.otpremnice||[]).slice(0,20).map((o,i)=>(
+          <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:i%2===0?"white":"#FAF6EE",borderRadius:10,border:"1px solid #E8DECA",marginBottom:6}}>
+            <div style={{fontSize:24}}>📄</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                <Tag bg="#FAF6EE" color="#1C1A17">Br: {o.brOtpremnice||o.id}</Tag>
+                <Tag bg="#FFF8DC" color="#C8860A">{o.datum}</Tag>
+                <Tag bg="#E8F5E9" color="#107C41">{o.dobavljacNaziv}</Tag>
+              </div>
+              <div style={{fontSize:12,color:"#5A4A35"}}>
+                {o.stavke.length} stavki · {o.stavke.slice(0,3).map(s=>`${s.naziv} (${s.kolicina} ${s.jm})`).join(", ")}{o.stavke.length>3?"...":""}
+                {o.ukupno>0&&<span style={{marginLeft:8,fontWeight:700,color:"#C8860A"}}> · {o.ukupno.toLocaleString()} RSD</span>}
+              </div>
+            </div>
+            <button onClick={()=>printOtp(o)} style={{...S.btn2,background:"#1C1A17",color:"white",padding:"7px 12px",fontSize:12,borderRadius:8,border:"none"}}>🖨️ PDF</button>
+          </div>
+        ))}
+      </Card>
+      {show&&<Modal title="📄 Nova Otpremnica — Prijem Robe" onClose={()=>setShow(false)}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+          <div><label style={S.label}>Broj Otpremnice</label><input value={form.brOtpremnice} onChange={e=>setF(f=>({...f,brOtpremnice:e.target.value}))} style={S.input} placeholder="npr. OTP-001"/></div>
+          <div><label style={S.label}>Datum Prijema</label><input type="date" value={form.datum} onChange={e=>setF(f=>({...f,datum:e.target.value}))} style={S.input}/></div>
+          <div><label style={S.label}>Dobavljač</label><select value={form.dobId} onChange={e=>setF(f=>({...f,dobId:e.target.value}))} style={S.input}><option value="">— Bez dobavljača —</option>{(data.dobavljaci||[]).filter(d=>d.status==="AKTIVAN").map(d=><option key={d.id} value={d.id}>{d.naziv}</option>)}</select></div>
+          <div><label style={S.label}>Napomena</label><input value={form.napomena} onChange={e=>setF(f=>({...f,napomena:e.target.value}))} style={S.input} placeholder="Opciono..."/></div>
+        </div>
+        <label style={{...S.label,marginBottom:8}}>🌾 Stavke (sirovine koje su stigle)</label>
+        <div style={{maxHeight:300,overflowY:"auto",marginBottom:10}}>
+          {stavke.map((s,i)=>(
+            <div key={i} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr auto",gap:8,marginBottom:8,alignItems:"center"}}>
+              <select value={s.siroId} onChange={e=>updStavka(i,"siroId",e.target.value)} style={{...S.input,fontSize:12}}>
+                <option value="">— Sirovina —</option>
+                {(data.sirovine||[]).map(sir=><option key={sir.id} value={sir.id}>{sir.naziv} ({sir.kolicina} {sir.jm})</option>)}
+              </select>
+              <input type="number" value={s.kolicina} onChange={e=>updStavka(i,"kolicina",e.target.value)} style={{...S.input,textAlign:"right"}} placeholder="Kol."/>
+              <input type="number" value={s.cena} onChange={e=>updStavka(i,"cena",e.target.value)} style={{...S.input,textAlign:"right"}} placeholder="Cena RSD"/>
+              <button onClick={()=>removeStavka(i)} style={{...S.btn2,color:"#C00000",background:"#FFF0F0",padding:"8px 10px"}}>✕</button>
+            </div>
+          ))}
+        </div>
+        <button onClick={addStavka} style={{...S.btn2,width:"100%",padding:10,textAlign:"center",marginBottom:14,fontSize:13}}>➕ Dodaj Stavku</button>
+        <div style={{background:"#E8F5E9",borderRadius:10,padding:"10px 14px",fontSize:13,marginBottom:14,fontWeight:700,color:"#107C41"}}>
+          ✅ Ukupna vrednost: {stavke.filter(s=>s.kolicina&&s.cena).reduce((s,x)=>s+(+x.kolicina)*(+x.cena),0).toLocaleString()} RSD
+        </div>
+        <div style={{display:"flex",gap:10}}><Btn icon="📄" label="Potvrdi Prijem" onClick={save} color="#1C1A17" full/><Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/></div>
+      </Modal>}
+    </div>
+  );
+}
+
 
 // ── SHARED UI ─────────────────────────────────────────────────────
 function Card({title,children}){return <div style={{background:"white",borderRadius:14,padding:"18px 20px",boxShadow:"0 2px 12px rgba(74,44,10,.07)",border:"1px solid #E8DECA"}}>{title&&<h3 style={{margin:"0 0 14px",fontFamily:"Georgia,serif",fontSize:14,color:"#1C1A17",borderBottom:"2px solid #E8D5A0",paddingBottom:10}}>{title}</h3>}{children}</div>;}
