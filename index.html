@@ -116,6 +116,8 @@ try {
 }
 </script>
 
+<!-- KORAK 3: React, Babel, SheetJS (za uvoz Šoljica XLS) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- KORAK 3: React, Babel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -376,6 +378,7 @@ function App() {
     {key:"troskovi",   icon:"💰", label:"Troškovi",            roles:["direktor"]},
     {key:"dobavljaci", icon:"📦", label:"Dobavljači",          roles:["direktor","magacioner"]},
     {key:"korisnici",  icon:"🔑", label:"Korisnici & PIN",     roles:["direktor"]},
+    {key:"soljica",    icon:"📤", label:"Uvoz iz Šoljice",          roles:["direktor","prodavac1","prodavac2"]},
     {key:"proizvodi",  icon:"🛒", label:"Upravljanje Proizvodima", roles:["direktor"]},
     {key:"aktivnost",  icon:"🕐", label:"Aktivnost",           roles:["direktor","magacioner","radnik","prodavac1","prodavac2"]},
   ];
@@ -400,6 +403,7 @@ function App() {
           {validTab==="troskovi"   && <Troskovi    data={data} persist={persist} perms={perms} />}
           {validTab==="dobavljaci" && <Dobavljaci  data={data} persist={persist} perms={perms} session={session} addLog={addLog} />}
           {validTab==="korisnici"  && <KorisniciTab korisnici={korisnici} persistUsers={persistUsers} />}
+          {validTab==="soljica"    && <UvozSoljica data={data} persist={persist} session={session} myLokal={myLokal} addLog={addLog} />}
           {validTab==="proizvodi"  && <UpravljanjeProizvodima data={data} persist={persist} />}
           {validTab==="aktivnost"  && <Aktivnost   data={data} session={session} />}
         </div>
@@ -519,7 +523,7 @@ function TopBar({tab,tabs,saveSt,session,perms,myLokal}) {
 function KorisniciTab({korisnici,persistUsers}) {
   const [show,setShow]=useState(false); const [editId,setEdit]=useState(null);
   const [form,setF]=useState({ime:"",uloga:"prodavac1",pin:""}); const [sp,setSP]=useState({});
-  const pristup={direktor:["📊 Dashboard","👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","📋 Evidencija","🏁 Zaključak Smjene","🌾 Sirovine & Otpremnice","💰 Troškovi","📦 Dobavljači","🔑 Korisnici","🕐 Aktivnost"],magacioner:["👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","🌾 Sirovine & Otpremnice","📦 Dobavljači","🕐 Aktivnost"],radnik:["👨‍🍳 Dnevna Prizv. (unos)","🕐 Aktivnost"],prodavac1:["🏪 Stanje Mama 1","📋 Evidencija","🏁 Zaključak Smjene","🔢 Popis","🕐 Aktivnost"],prodavac2:["🏪 Stanje Mama 2","📋 Evidencija","🏁 Zaključak Smjene","🔢 Popis","🕐 Aktivnost"]};
+  const pristup={direktor:["📊 Dashboard","👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","📋 Evidencija","🏁 Zaključak Smjene","🌾 Sirovine & Otpremnice","💰 Troškovi","📦 Dobavljači","🔑 Korisnici","🕐 Aktivnost"],magacioner:["👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","🌾 Sirovine & Otpremnice","📦 Dobavljači","🕐 Aktivnost"],radnik:["👨‍🍳 Dnevna Prizv. (unos)","🕐 Aktivnost"],prodavac1:["🏪 Stanje Mama 1","📋 Evidencija","🏁 Zaključak Smjene","📤 Uvoz iz Šoljice","🔢 Popis","🕐 Aktivnost"],prodavac2:["🏪 Stanje Mama 2","📋 Evidencija","🏁 Zaključak Smjene","📤 Uvoz iz Šoljice","🔢 Popis","🕐 Aktivnost"]};
   const saveK=()=>{if(!form.ime.trim()||form.pin.length<4){alert("Ime i PIN (min 4 cifre)!");return;}persistUsers(editId?korisnici.map(k=>k.id===editId?{...form,id:editId}:k):[...korisnici,{...form,id:Date.now()}]);setShow(false);setEdit(null);};
   return (
     <div style={{display:"flex",flexDirection:"column",gap:18}}>
@@ -699,10 +703,7 @@ function Dostava({data,persist,perms,session,addLog}) {
             </table></div></div>);
         })}
       </Card>
-      <Card title="📋 Historija Dostava">
-        {(data.dostave||[]).length===0?<p style={{color:"#7A6545",fontSize:13,textAlign:"center",padding:20}}>Nema dostava.</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{background:"#C8860A"}}>{["Datum","Lokal","Ukupno","Korisnik"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{(data.dostave||[]).slice(0,20).map((d,i)=>{const lok=LOKALI[d.lokacija];return<tr key={d.id} style={{background:i%2===0?"white":"#FAF6EE"}}><td style={S.td}>{d.datum}</td><td style={S.td}><Tag bg={lok.bg} color={lok.boja}>{lok.icon} {lok.naziv}</Tag></td><td style={{...S.td,textAlign:"right",fontWeight:700}}>{fmtN(d.stavke.reduce((s,x)=>s+x.kolicina,0))}</td><td style={S.td}>{d.korisnik}</td></tr>;})}
-        </tbody></table></div>}
-      </Card>
+      <DostavaHistorija data={data} persist={persist} perms={perms} session={session} addLog={addLog}/>
       {show&&<Modal title="🚚 Nova Dostava iz Proizvodnje" onClose={()=>setShow(false)}>
         <div style={{marginBottom:14}}><label style={S.label}>Odredišni Lokal</label><div style={{display:"flex",gap:10}}>{["mama1","mama2"].map(l=>{const li=LOKALI[l];return<button key={l} onClick={()=>setSelL(l)} style={{flex:1,padding:"12px",borderRadius:10,border:`2px solid ${selLok===l?li.boja:"#E0D5BE"}`,background:selLok===l?li.bg:"white",color:li.boja,fontWeight:700,cursor:"pointer",fontSize:14}}>{li.icon} {li.naziv}</button>;})}</div></div>
         <div style={{maxHeight:360,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,marginBottom:14}}>
@@ -715,6 +716,101 @@ function Dostava({data,persist,perms,session,addLog}) {
         <div style={{display:"flex",gap:10}}><Btn icon="🚚" label="Potvrdi Dostavu" onClick={save} color="#C8860A" full/><Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/></div>
       </Modal>}
     </div>
+  );
+}
+
+
+// ── DOSTAVA HISTORIJA (sa Storno opcijom) ─────────────────────────
+function DostavaHistorija({data,persist,perms,session,addLog}) {
+  const [expanded,setExp] = useState(null);
+  const [confirmId,setConfId] = useState(null);
+
+  const stornoDostaву = (d) => {
+    const lok = LOKALI[d.lokacija];
+    // Vraća robu nazad u Proizvodnju, skida iz lokala
+    let ns = [...(data.stanjeLokala||[])];
+    d.stavke.forEach(st => {
+      ns = ns.map(s =>
+        s.prodId===st.prodId && s.lokacija==="proizvodnja" ? {...s, kolicina:s.kolicina+st.kolicina} :
+        s.prodId===st.prodId && s.lokacija===d.lokacija    ? {...s, kolicina:Math.max(0,s.kolicina-st.kolicina)} :
+        s
+      );
+    });
+    const ukupno = d.stavke.reduce((s,x)=>s+x.kolicina,0);
+    persist(addLog(
+      {...data, stanjeLokala:ns, dostave:(data.dostave||[]).filter(x=>x.id!==d.id)},
+      `STORNO dostave u ${lok.naziv}: −${ukupno} kom (vratio ${session.ime})`
+    ));
+    setConfId(null);
+  };
+
+  const dostave = data.dostave||[];
+
+  return (
+    <Card title="📋 Historija Dostava">
+      {dostave.length===0
+        ? <p style={{color:"#7A6545",fontSize:13,textAlign:"center",padding:20}}>Nema dostava.</p>
+        : dostave.slice(0,30).map((d,i) => {
+            const lok = LOKALI[d.lokacija];
+            const ukupno = d.stavke.reduce((s,x)=>s+x.kolicina,0);
+            const isExp = expanded===d.id;
+            const isConf = confirmId===d.id;
+            const isDanas = d.datum===today();
+            return (
+              <div key={d.id} style={{marginBottom:8,borderRadius:10,border:`1px solid ${isExp?"#C8860A":"#E8DECA"}`,overflow:"hidden",background:"white"}}>
+                {/* Main row */}
+                <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:isExp?"#FFF8DC":"white"}}>
+                  <div style={{flex:1,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",cursor:"pointer"}} onClick={()=>setExp(isExp?null:d.id)}>
+                    <Tag bg={lok.bg} color={lok.boja}>{lok.icon} {lok.naziv}</Tag>
+                    <span style={{fontSize:12,color:"#7A6545"}}>{d.datum}</span>
+                    <span style={{fontWeight:700,fontSize:14,color:"#1C1A17"}}>{fmtN(ukupno)} kom</span>
+                    <span style={{fontSize:11,color:"#9A8A75"}}>{d.korisnik}</span>
+                    {!isDanas&&<Tag bg="#F5F5F5" color="#999">⏰ Starija</Tag>}
+                  </div>
+                  <button onClick={()=>setExp(isExp?null:d.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#C8A050",fontSize:16,padding:"2px 6px"}}>{isExp?"▲":"▼"}</button>
+                  {/* Storno — samo direktor ili magacioner, i samo dostave od danas */}
+                  {(perms.canDelete||(isDanas&&perms.canDeliver)) && (
+                    <button onClick={()=>setConfId(isConf?null:d.id)}
+                      style={{padding:"6px 12px",borderRadius:8,border:"1px solid #FFCCCC",background:isConf?"#FFF0F0":"white",color:"#C00000",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                      ↺ Storno
+                    </button>
+                  )}
+                </div>
+
+                {/* Confirm storno */}
+                {isConf&&(
+                  <div style={{background:"#FFF0F0",borderTop:"1px solid #FFCCCC",padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                    <div style={{flex:1,fontSize:13,color:"#C00000"}}>
+                      <b>⚠️ Storno dostave?</b> Roba se vraća nazad u Proizvodnju.<br/>
+                      <span style={{fontSize:11,color:"#999"}}>Ovo ne može da se poništi!</span>
+                    </div>
+                    <button onClick={()=>stornoDostaву(d)} style={{background:"#C00000",color:"white",border:"none",borderRadius:8,padding:"8px 18px",fontWeight:700,cursor:"pointer",fontSize:13}}>✅ Da, storniraj</button>
+                    <button onClick={()=>setConfId(null)} style={{background:"#eee",color:"#333",border:"none",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontSize:13}}>Otkaži</button>
+                  </div>
+                )}
+
+                {/* Expanded details */}
+                {isExp&&(
+                  <div style={{borderTop:"1px solid #F0E6D8",padding:"10px 16px",background:"#FFFDF8"}}>
+                    <div style={{fontSize:11,color:"#9A8A75",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Detalji dostave — {d.vreme}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:6}}>
+                      {d.stavke.map(st=>{
+                        const p = getSviP(data).find(x=>x.id===st.prodId);
+                        return(
+                          <div key={st.prodId} style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",background:"white",borderRadius:7,border:"1px solid #EEE2D0",fontSize:12}}>
+                            <span style={{color:"#1C1A17"}}>{p?.naziv||st.prodId}</span>
+                            <span style={{fontWeight:800,color:"#C8860A"}}>{fmtN(st.kolicina)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+      }
+    </Card>
   );
 }
 
@@ -953,7 +1049,7 @@ function ZaklucakSmjene({data,persist,session,myLokal,addLog}) {
       const raspolozivo=pocetno+dostavljeno;
       const krajnjeVal=krajnje[p.id]!==""?+krajnje[p.id]:null;
       const prodano=krajnjeVal!==null?Math.max(0,raspolozivo-krajnjeVal):null;
-      const cena=data.cijene?.[p.id]||0;
+      const cp=data.cijene?.[p.id]; const cena=getAktivnaCena(cp, 1);
       return{prodId:p.id,naziv:p.naziv,kat:p.kat,pocetno,dostavljeno,raspolozivo,krajnje:krajnjeVal,prodano,cena,promet:prodano?prodano*cena:0};
     }).filter(s=>s.raspolozivo>0||s.krajnje!==null);
     const ukPromet=stavke.reduce((s,x)=>s+x.promet,0);
@@ -1139,34 +1235,228 @@ function ZaklucakSmjene({data,persist,session,myLokal,addLog}) {
 }
 
 // ── CIJENE MODAL (za direktora) ───────────────────────────────────
+// ── CIJENE MODAL (višestruke cijene, direktor) ────────────────────
+// Struktura cijene po proizvodu:
+// { maloprodaja: 35, veleprodaja: 30, pragVeleprodaje: 100,
+//   tepsija: { naziv:"Tepsija (60 kom)", kolicina:60, cena:1500 },
+//   akcija: { naziv:"Ljetna akcija", popust:10, od:"2025-06-01", do:"2025-08-31" } }
+
+function getAktivnaCena(ceneObj, kolicina=1) {
+  if(!ceneObj) return 0;
+  // Provjeri akcijsku cijenu (datum)
+  if(ceneObj.akcija?.popust && ceneObj.akcija.od && ceneObj.akcija.do) {
+    const dan = today();
+    if(dan >= ceneObj.akcija.od && dan <= ceneObj.akcija.do) {
+      const osnova = ceneObj.maloprodaja||0;
+      return Math.round(osnova * (1 - ceneObj.akcija.popust/100));
+    }
+  }
+  // Provjeri veleprodajni prag
+  if(ceneObj.veleprodaja && ceneObj.pragVeleprodaje && kolicina >= ceneObj.pragVeleprodaje) {
+    return ceneObj.veleprodaja;
+  }
+  return ceneObj.maloprodaja||0;
+}
+
 function CijeneModal({data,persist}) {
-  const [show,setShow]=useState(false);
-  const [cijene,setCijene]=useState({});
-  const openCijene=()=>{setCijene(data.cijene||{});setShow(true);};
-  const save=()=>{persist({...data,cijene});setShow(false);};
-  if(show)return(
-    <Modal title="💵 Maloprodajne Cijene" onClose={()=>setShow(false)}>
-      <div style={{background:"#FFF8DC",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#5A4A35",marginBottom:14}}>
-        Cijene su potrebne za <b>kontrolu blagajne</b>. Ako nisu unesene, sistem broji samo količine.
+  const [show,setShow] = useState(false);
+  const [cijene,setCijene] = useState({});
+  const [selProd,setSelProd] = useState(null); // za detalji panel
+  const [tab,setTab] = useState("osnovno");
+
+  const openCijene = () => { setCijene(data.cijene||{}); setShow(true); setSelProd(null); };
+
+  const updC = (prodId, field, val) => {
+    setCijene(c => ({...c, [prodId]: {...(c[prodId]||{}), [field]: val}}));
+  };
+  const updAkcija = (prodId, field, val) => {
+    setCijene(c => ({...c, [prodId]: {...(c[prodId]||{}), akcija:{...(c[prodId]?.akcija||{}), [field]: val}}}));
+  };
+  const updTepsija = (prodId, field, val) => {
+    setCijene(c => ({...c, [prodId]: {...(c[prodId]||{}), tepsija:{...(c[prodId]?.tepsija||{}), [field]: val}}}));
+  };
+
+  const save = () => { persist({...data, cijene}); setShow(false); };
+
+  const kat = getKat(data);
+  const sviP = getSviP(data);
+
+  // Koliko proizvoda ima cijene
+  const brSaCenama = Object.keys(cijene).filter(id=>cijene[id]?.maloprodaja>0).length;
+
+  if(show) return (
+    <Modal title="💵 Cjenovnik — Mama Mantia" onClose={()=>setShow(false)}>
+      <div style={{background:"#FFF8DC",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#5A4A35",marginBottom:14,lineHeight:1.7}}>
+        Unesite cijene jednom — koriste se za <b>okvirnu kontrolu blagajne</b> na kraju smjene.<br/>
+        Šoljica i dalje vodi stvarnu naplatu. Ovdje su <b>referentne cijene</b>.
       </div>
-      <div style={{maxHeight:420,overflowY:"auto",marginBottom:14}}>
-        {getKat(data).map(kat=>(
-          <div key={kat.id} style={{marginBottom:12}}>
-            <div style={{fontWeight:700,fontSize:12,color:kat.boja,marginBottom:6}}>{kat.icon} {kat.naziv}</div>
-            {kat.proizvodi.map(p=>(
-              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
-                <span style={{flex:1,fontSize:13}}>{p.naziv}</span>
-                <input type="number" value={cijene[p.id]||""} onChange={e=>setCijene(c=>({...c,[p.id]:+e.target.value}))} style={{...S.input,width:100,textAlign:"right"}} placeholder="0 RSD"/>
-              </div>
-            ))}
-          </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",gap:4,marginBottom:14,background:"#F5F0E8",borderRadius:10,padding:4}}>
+        {[{k:"osnovno",l:"📋 Osnovno (sve)"},{k:"veleprodaja",l:"📦 Količinski popusti"},{k:"tepsija",l:"🍮 Tepsija/Kg"},{k:"akcija",l:"🎯 Akcijske cijene"}].map(t=>(
+          <button key={t.k} onClick={()=>setTab(t.k)} style={{flex:1,padding:"7px 4px",borderRadius:7,border:"none",background:tab===t.k?"white":"transparent",color:tab===t.k?"#1C1A17":"#7A6545",fontWeight:tab===t.k?700:400,cursor:"pointer",fontSize:11,boxShadow:tab===t.k?"0 1px 4px rgba(0,0,0,.1)":""}}>{t.l}</button>
         ))}
       </div>
-      <div style={{display:"flex",gap:10}}><Btn icon="💾" label="Sačuvaj Cijene" onClick={save} color="#1C1A17" full/><Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/></div>
+
+      <div style={{maxHeight:420,overflowY:"auto",marginBottom:14}}>
+
+        {/* TAB: Osnovno */}
+        {tab==="osnovno"&&kat.map(k=>(
+          <div key={k.id} style={{marginBottom:14}}>
+            <div style={{fontWeight:700,fontSize:12,color:k.boja,marginBottom:6,display:"flex",alignItems:"center",gap:6}}>{k.icon} {k.naziv}</div>
+            {k.proizvodi.map(p=>{
+              const cp=cijene[p.id]||{};
+              const aktCena=getAktivnaCena(cp);
+              return(
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5,padding:"6px 10px",background:"#FAFAF8",borderRadius:8,border:"1px solid #EEE2D0"}}>
+                <span style={{flex:1,fontSize:13,fontWeight:600}}>{p.naziv}</span>
+                {aktCena>0&&aktCena!==cp.maloprodaja&&<Tag bg="#E8F5E9" color="#107C41">Aktiv: {aktCena} RSD</Tag>}
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <input type="number" value={cp.maloprodaja||""} onChange={e=>updC(p.id,"maloprodaja",+e.target.value)}
+                    style={{...S.input,width:90,textAlign:"right",fontSize:13}} placeholder="0 RSD"/>
+                  <span style={{fontSize:11,color:"#9A8A75",flexShrink:0}}>RSD/kom</span>
+                </div>
+              </div>);
+            })}
+          </div>
+        ))}
+
+        {/* TAB: Veleprodaja / Količinski popust */}
+        {tab==="veleprodaja"&&(
+          <div>
+            <div style={{background:"#EFF6FF",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#1D4ED8",marginBottom:12}}>
+              <b>📦 Količinski popust</b> — npr. mantija 35 RSD/kom, ali 100+ komada = 30 RSD/kom.<br/>
+              Unesite prag i veleprodajnu cijenu. Ostavite prazno ako nema popusta.
+            </div>
+            {sviP.filter(p=>!p.direktna).map(p=>{
+              const cp=cijene[p.id]||{};
+              if(!cp.maloprodaja) return null;
+              return(
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7,padding:"8px 12px",background:"#FAFAF8",borderRadius:8,border:"1px solid #EEE2D0",flexWrap:"wrap"}}>
+                <span style={{fontSize:13,fontWeight:700,flex:1,minWidth:120}}>{p.naziv}</span>
+                <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
+                  <span style={{fontSize:11,color:"#7A6545"}}>od</span>
+                  <input type="number" value={cp.pragVeleprodaje||""} onChange={e=>updC(p.id,"pragVeleprodaje",+e.target.value)}
+                    style={{...S.input,width:65,textAlign:"center"}} placeholder="100"/>
+                  <span style={{fontSize:11,color:"#7A6545"}}>kom →</span>
+                  <input type="number" value={cp.veleprodaja||""} onChange={e=>updC(p.id,"veleprodaja",+e.target.value)}
+                    style={{...S.input,width:80,textAlign:"right"}} placeholder="0 RSD"/>
+                  <span style={{fontSize:11,color:"#7A6545"}}>RSD/kom</span>
+                  {cp.maloprodaja&&cp.veleprodaja&&<Tag bg="#E8F5E9" color="#107C41">Uštednja: {cp.maloprodaja-cp.veleprodaja} RSD/kom</Tag>}
+                </div>
+              </div>);
+            }).filter(Boolean)}
+            {sviP.filter(p=>!p.direktna&&cijene[p.id]?.maloprodaja).length===0&&
+              <p style={{color:"#9A8A75",textAlign:"center",padding:20,fontSize:13}}>Prvo unesite maloprodajne cijene u tab "Osnovno"</p>}
+          </div>
+        )}
+
+        {/* TAB: Tepsija/Kg */}
+        {tab==="tepsija"&&(
+          <div>
+            <div style={{background:"#F3E5F5",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#6A1B9A",marginBottom:12}}>
+              <b>🍮 Prodaja na tepsiju/kg</b> — npr. Baklava Sultan 1 kom = X RSD, cijela tepsija (60 kom) = Y RSD.<br/>
+              Tepsija cijena može biti niža od zbroja komada.
+            </div>
+            {sviP.map(p=>{
+              const cp=cijene[p.id]||{};
+              return(
+              <div key={p.id} style={{marginBottom:8,padding:"10px 12px",background:"#FAFAF8",borderRadius:8,border:"1px solid #EEE2D0"}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#1C1A17"}}>{p.naziv}
+                  {cp.maloprodaja>0&&<span style={{fontWeight:400,color:"#7A6545",fontSize:11,marginLeft:8}}>({cp.maloprodaja} RSD/kom)</span>}
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,color:"#7A6545",flexShrink:0}}>Naziv:</span>
+                    <input value={cp.tepsija?.naziv||""} onChange={e=>updTepsija(p.id,"naziv",e.target.value)}
+                      style={{...S.input,width:120,fontSize:12}} placeholder="npr. Tepsija"/>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,color:"#7A6545",flexShrink:0}}>Kom u tepsiji:</span>
+                    <input type="number" value={cp.tepsija?.kolicina||""} onChange={e=>updTepsija(p.id,"kolicina",+e.target.value)}
+                      style={{...S.input,width:65,textAlign:"center"}} placeholder="60"/>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,color:"#7A6545",flexShrink:0}}>Cijena tepsije:</span>
+                    <input type="number" value={cp.tepsija?.cena||""} onChange={e=>updTepsija(p.id,"cena",+e.target.value)}
+                      style={{...S.input,width:90,textAlign:"right"}} placeholder="0 RSD"/>
+                    <span style={{fontSize:11,color:"#7A6545"}}>RSD</span>
+                  </div>
+                  {cp.tepsija?.kolicina&&cp.tepsija?.cena&&cp.maloprodaja&&(
+                    <Tag bg={cp.tepsija.cena<cp.maloprodaja*cp.tepsija.kolicina?"#E8F5E9":"#FFF0F0"}
+                         color={cp.tepsija.cena<cp.maloprodaja*cp.tepsija.kolicina?"#107C41":"#C00000"}>
+                      {cp.tepsija.cena<cp.maloprodaja*cp.tepsija.kolicina
+                        ? `Popust: ${Math.round((1-cp.tepsija.cena/(cp.maloprodaja*cp.tepsija.kolicina))*100)}% (${(cp.maloprodaja*cp.tepsija.kolicina-cp.tepsija.cena).toLocaleString()} RSD)`
+                        : "Nema popusta na tepsiji"}
+                    </Tag>
+                  )}
+                </div>
+              </div>);
+            })}
+          </div>
+        )}
+
+        {/* TAB: Akcijske cijene */}
+        {tab==="akcija"&&(
+          <div>
+            <div style={{background:"#FFF0F0",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#C00000",marginBottom:12}}>
+              <b>🎯 Akcijska/Sezonska cijena</b> — vrijedi u određenom periodu. Automatski se primjenjuje u kontroli blagajne.
+            </div>
+            {sviP.map(p=>{
+              const cp=cijene[p.id]||{};
+              return(
+              <div key={p.id} style={{marginBottom:8,padding:"10px 12px",background:"#FAFAF8",borderRadius:8,border:"1px solid #EEE2D0"}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>
+                  {p.naziv}
+                  {cp.maloprodaja>0&&<span style={{fontWeight:400,color:"#7A6545",fontSize:11,marginLeft:8}}>Redovna: {cp.maloprodaja} RSD</span>}
+                  {cp.akcija?.popust>0&&cp.akcija?.od&&cp.akcija?.do&&today()>=cp.akcija.od&&today()<=cp.akcija.do&&
+                    <Tag bg="#FFF0F0" color="#C00000" style={{marginLeft:8}}>🎯 AKTIVAN popust</Tag>}
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,color:"#7A6545"}}>Naziv:</span>
+                    <input value={cp.akcija?.naziv||""} onChange={e=>updAkcija(p.id,"naziv",e.target.value)}
+                      style={{...S.input,width:120,fontSize:12}} placeholder="npr. Ljetna akcija"/>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,color:"#7A6545"}}>Popust %:</span>
+                    <input type="number" min="0" max="100" value={cp.akcija?.popust||""} onChange={e=>updAkcija(p.id,"popust",+e.target.value)}
+                      style={{...S.input,width:60,textAlign:"center"}} placeholder="10"/>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,color:"#7A6545"}}>Od:</span>
+                    <input type="date" value={cp.akcija?.od||""} onChange={e=>updAkcija(p.id,"od",e.target.value)} style={{...S.input,width:130}}/>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,color:"#7A6545"}}>Do:</span>
+                    <input type="date" value={cp.akcija?.do||""} onChange={e=>updAkcija(p.id,"do",e.target.value)} style={{...S.input,width:130}}/>
+                  </div>
+                  {cp.akcija?.popust&&cp.maloprodaja&&
+                    <Tag bg="#FFF8DC" color="#C8860A">Akcijska cijena: {Math.round(cp.maloprodaja*(1-cp.akcija.popust/100))} RSD/kom</Tag>}
+                </div>
+              </div>);
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{background:"#E8F5E9",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#107C41",marginBottom:14}}>
+        ✅ {brSaCenama} od {sviP.length} proizvoda ima unesenu cijenu
+      </div>
+      <div style={{display:"flex",gap:10}}>
+        <Btn icon="💾" label="Sačuvaj Cjenovnik" onClick={save} color="#1C1A17" full/>
+        <Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/>
+      </div>
     </Modal>
   );
-  return(<button onClick={openCijene} style={{...S.btn2,fontSize:12,padding:"8px 14px",display:"flex",alignItems:"center",gap:6}}>💵 Postavi Maloprodajne Cijene</button>);
+
+  return(
+    <button onClick={openCijene} style={{...S.btn2,fontSize:12,padding:"8px 14px",display:"flex",alignItems:"center",gap:6}}>
+      💵 Cjenovnik ({brSaCenama} cijena)
+    </button>
+  );
 }
+
 
 // ── SIROVINE + OTPREMNICE ─────────────────────────────────────────
 function SirovineOtpremnice({data,persist,perms,session,addLog}) {
@@ -1323,6 +1613,439 @@ function Otpremnice({data,persist,perms,session,addLog}) {
   );
 }
 
+
+
+
+// ── UVOZ IZ ŠOLJICE ──────────────────────────────────────────────
+// Šoljica XLS struktura: A=ID, B=NazivIdx, C=Cena, D=Izlaz(prodano), E=IZNOS
+
+// Mapa Šoljica nazivi → Mama Mantia prodId (popunjava direktor + auto-match)
+const normStr = s => (s||"").toLowerCase()
+  .replace(/š/g,"s").replace(/č/g,"c").replace(/ć/g,"c")
+  .replace(/ž/g,"z").replace(/đ/g,"dj").replace(/dž/g,"dz")
+  .replace(/[^a-z0-9 ]/g,"").trim();
+
+// Detektuje množilac iz naziva: "10 MANTIJA" → 10, "TEPSIJA" → 120, "KG" → null
+function detectMultiplier(solNaziv) {
+  const n = solNaziv.toUpperCase();
+  // Broj na početku: "10 MANTIJA", "5 PITA"
+  const brPocetakMatch = n.match(/^(\d+)\s+/);
+  if(brPocetakMatch) return parseInt(brPocetakMatch[1]);
+  // Tepsija u nazivu
+  if(n.includes("TEPSIJ")) return 120;
+  // Kg/kilogram — označi kao kg
+  if(n.match(/\bKG\b/)) return -1; // -1 = kg, poseban slučaj
+  return 1; // default: 1 komad
+}
+
+function autoMatch(solNaziv, mamaProizvodi) {
+  const n = normStr(solNaziv);
+  // Ukloni broj s početka za matching: "10 mantija" → "mantija"
+  const nClean = n.replace(/^\d+\s+/, "").replace(/tepsij[a-z]*/,"").trim();
+  // 1. Exact (original)
+  let m = mamaProizvodi.find(p => normStr(p.naziv) === n);
+  if(m) return m.id;
+  // 2. Exact (clean — bez broja/tepsija)
+  m = mamaProizvodi.find(p => normStr(p.naziv) === nClean);
+  if(m) return m.id;
+  // 3. Contains (clean)
+  m = mamaProizvodi.find(p => nClean.includes(normStr(p.naziv)) || normStr(p.naziv).includes(nClean));
+  if(m) return m.id;
+  // 4. Contains (original)
+  m = mamaProizvodi.find(p => n.includes(normStr(p.naziv)) || normStr(p.naziv).includes(n));
+  if(m) return m.id;
+  // 5. Word match
+  const words = nClean.split(" ").filter(w=>w.length>3);
+  m = mamaProizvodi.find(p => words.some(w => normStr(p.naziv).includes(w)));
+  if(m) return m.id;
+  return null;
+}
+
+function parseXlsBuffer(buffer) {
+  // Uses SheetJS
+  if(typeof XLSX === "undefined") throw new Error("SheetJS nije učitan!");
+  const wb = XLSX.read(buffer, {type:"array"});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:""});
+
+  // First row is header: ID, Naziv, Cena, Izlaz, IZNOS, Preneto, Ulaz, Na kraju, Knjig.sifra, Popust
+  const header = rows[0];
+  const idxNaziv = header.indexOf("Naziv");
+  const idxCena  = header.indexOf("Cena");
+  const idxIzlaz = header.indexOf("Izlaz");
+  const idxIznos = header.indexOf("IZNOS");
+
+  const result = [];
+  for(let i=1; i<rows.length; i++) {
+    const row = rows[i];
+    const naziv = String(row[idxNaziv]||"").trim();
+    const cena  = parseFloat(row[idxCena])||0;
+    const izlaz = parseFloat(row[idxIzlaz])||0;
+    const iznos = parseFloat(row[idxIznos])||0;
+    if(naziv && izlaz > 0) {
+      result.push({naziv, cena, izlaz, iznos});
+    }
+  }
+  return result;
+}
+
+function UvozSoljica({data, persist, session, myLokal, addLog}) {
+  const [fajlovi, setFajlovi]     = useState({kuhinja:null, sank:null});
+  const [parsed,  setParsed]      = useState({kuhinja:[], sank:[]});
+  const [mapping, setMapping]     = useState({}); // solNaziv → mamaProdId
+  const [step,    setStep]        = useState(1);  // 1=upload, 2=mapiranje, 3=pregled, 4=uvezeno
+  const [selLok,  setSelL]        = useState(myLokal&&myLokal!=="proizvodnja"?myLokal:"mama1");
+  const [error,   setError]       = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [uvezena, setUvezena]     = useState(null);
+
+  const mamaProizvodi = getSviP(data);
+
+  // Sve Šoljica stavke (iz oba fajla)
+  const sveSolStavke = [...parsed.kuhinja, ...parsed.sank];
+
+  const handleFile = (tip, file) => {
+    if(!file) return;
+    setError("");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const buf = new Uint8Array(e.target.result);
+        const rows = parseXlsBuffer(buf);
+        setParsed(p => ({...p, [tip]:rows}));
+        // Auto-match
+        const newMap = {...mapping};
+        rows.forEach(row => {
+          if(!newMap[row.naziv]) {
+            const matchId = autoMatch(row.naziv, mamaProizvodi);
+            const kol = detectMultiplier(row.naziv);
+            newMap[row.naziv] = { prodId: matchId||"", kol: kol===1?1:kol };
+          }
+        });
+        setMapping(newMap);
+        setFajlovi(f => ({...f, [tip]:file.name}));
+      } catch(err) {
+        setError("Greška pri čitanju fajla: " + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const ukupnoSol = sveSolStavke.reduce((s,x)=>s+x.iznos, 0);
+  const ukupnoKom = sveSolStavke.reduce((s,x)=>s+x.izlaz, 0);
+  const neMapirano = sveSolStavke.filter(s=>!mapping[s.naziv]?.prodId).length;
+
+  const potvrdiUvoz = () => {
+    // Gradi zaključak smjene iz uvezenih podataka
+    const lok = LOKALI[selLok];
+    const stavke = sveSolStavke.map(s => {
+      const mapEntry = mapping[s.naziv]||{};
+      const prodId = mapEntry.prodId||null;
+      const kol = mapEntry.kol||1;  // množilac: 10 za "10 mantija", 120 za tepsiju
+      const p = mamaProizvodi.find(x=>x.id===prodId);
+      const stanjeProd = (data.stanjeLokala||[]).find(x=>x.prodId===prodId&&x.lokacija===selLok);
+      const raspolozivo = stanjeProd?.kolicina||0;
+      // Stvarno prodano komada = Šoljica izlaz × množilac
+      const prodanoKomada = s.izlaz * kol;
+      const krajnje = Math.max(0, raspolozivo - prodanoKomada);
+      return {
+        prodId,
+        naziv: p?.naziv||s.naziv,
+        solNaziv: s.naziv,
+        kat: p?.kat||"—",
+        pocetno: 0,
+        dostavljeno: 0,
+        raspolozivo,
+        krajnje,
+        prodano: prodanoKomada,
+        solIzlaz: s.izlaz,
+        kol,
+        cena: kol>1 ? Math.round(s.cena/kol) : s.cena,
+        promet: s.iznos,
+        izSoljice: true,
+      };
+    }).filter(s=>s.prodId||s.solNaziv);
+
+    // Ažurira stanje lokala za mapirane proizvode
+    let ns = [...(data.stanjeLokala||[])];
+    stavke.forEach(s => {
+      if(s.prodId) {
+        ns = ns.map(x => x.prodId===s.prodId&&x.lokacija===selLok
+          ? {...x, kolicina: Math.max(0, x.kolicina - s.prodano)}
+          : x
+        );
+      }
+    });
+
+    const zak = {
+      id: data.nextId.zaklucak,
+      lokacija: selLok,
+      lokNaziv: lok.naziv,
+      datum: today(),
+      vreme: nowStr(),
+      smjena: "soljica",
+      stavke,
+      blagajna: ukupnoSol,
+      ocekivaniPromet: ukupnoSol,
+      razlika: 0,
+      krajnjeStanje: stavke.filter(s=>s.prodId).map(s=>({prodId:s.prodId, kolicina:s.krajnje})),
+      korisnik: session.ime,
+      izSoljice: true,
+    };
+
+    persist(addLog(
+      {...data, stanjeLokala:ns,
+        zaklucakSmjene:[zak,...(data.zaklucakSmjene||[])],
+        nextId:{...data.nextId, zaklucak:data.nextId.zaklucak+1}
+      },
+      `Uvoz iz Šoljice — ${lok.naziv}: ${ukupnoKom} kom, ${ukupnoSol.toLocaleString()} RSD`
+    ));
+    setUvezena(zak);
+    setStep(4);
+  };
+
+  // ── STEP 1: Upload ──────────────────────────────────────────────
+  if(step===1) return (
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      <div style={{background:"#FFF8DC",border:"1px solid #E8D5A0",borderRadius:12,padding:"16px 20px",lineHeight:1.8}}>
+        <b style={{fontSize:15}}>📤 Uvoz iz Šoljice — Kako radi:</b><br/>
+        <span style={{fontSize:13,color:"#5A4A35"}}>
+          1. U Šoljici → Izvještaji → Dnevni presek → <b>Export XLS</b><br/>
+          2. Uploadujete oba fajla ovdje (Kuhinja i Šank)<br/>
+          3. Sistem automatski prepozna prodane artikle<br/>
+          4. Potvrđujete → stanje u lokalu se automatski ažurira ✅
+        </span>
+      </div>
+
+      {/* Lokal izbor */}
+      <Card title="Za koji lokal uvozite?">
+        <div style={{display:"flex",gap:10}}>
+          {["mama1","mama2"].map(l=>{const li=LOKALI[l];return(
+            <button key={l} onClick={()=>setSelL(l)} style={{flex:1,padding:14,borderRadius:12,border:`2px solid ${selLok===l?li.boja:"#E8DECA"}`,background:selLok===l?li.bg:"white",color:li.boja,fontWeight:700,cursor:"pointer",fontSize:15}}>
+              {li.icon} {li.naziv}
+            </button>
+          );})}
+        </div>
+      </Card>
+
+      {/* Upload zona */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        {[
+          {tip:"kuhinja", label:"🍳 Dnevni Kuhinja", opis:"Mantije, pite, peciva, slatkiši", boja:"#C8860A"},
+          {tip:"sank",    label:"🍹 Dnevni Šank",    opis:"Pića, sokovi, mantije šank",    boja:"#1D4ED8"},
+        ].map(({tip,label,opis,boja})=>(
+          <label key={tip} style={{display:"block",cursor:"pointer"}}>
+            <div style={{border:`2px dashed ${fajlovi[tip]?"#107C41":boja}`,borderRadius:14,padding:"24px 16px",textAlign:"center",background:fajlovi[tip]?"#E8F5E9":"white",transition:"all .2s"}}>
+              <div style={{fontSize:36,marginBottom:8}}>{fajlovi[tip]?"✅":"📂"}</div>
+              <div style={{fontWeight:700,fontSize:14,color:fajlovi[tip]?"#107C41":boja,marginBottom:4}}>{label}</div>
+              <div style={{fontSize:12,color:"#7A6545",marginBottom:10}}>{opis}</div>
+              {fajlovi[tip]
+                ? <div style={{fontSize:11,color:"#107C41",fontWeight:600}}>✓ {fajlovi[tip]}<br/>{parsed[tip].length} artikala učitano</div>
+                : <div style={{fontSize:11,color:"#9A8A75"}}>Kliknite ili prevucite XLS fajl</div>
+              }
+              <input type="file" accept=".xls,.xlsx" onChange={e=>handleFile(tip,e.target.files[0])} style={{display:"none"}}/>
+            </div>
+          </label>
+        ))}
+      </div>
+
+      {error&&<Alert>❌ {error}</Alert>}
+
+      {sveSolStavke.length>0&&(
+        <div style={{background:"#E8F5E9",borderRadius:12,padding:"14px 18px",display:"flex",gap:20,flexWrap:"wrap"}}>
+          <span style={{fontSize:13}}>📦 Ukupno artikala: <b>{sveSolStavke.length}</b></span>
+          <span style={{fontSize:13}}>🛍️ Prodano: <b>{ukupnoKom} kom</b></span>
+          <span style={{fontSize:13}}>💰 Promet: <b>{ukupnoSol.toLocaleString()} RSD</b></span>
+        </div>
+      )}
+
+      {sveSolStavke.length>0&&(
+        <Btn icon="➡️" label="Nastavi — Provjeri mapiranje" onClick={()=>setStep(2)} color="#1C1A17" full/>
+      )}
+    </div>
+  );
+
+  // ── STEP 2: Mapiranje ───────────────────────────────────────────
+  if(step===2) return (
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      <div style={{background:neMapirano>0?"#FFF0F0":"#E8F5E9",border:`1px solid ${neMapirano>0?"#FFCCCC":"#C8E6C9"}`,borderRadius:12,padding:"14px 18px",fontSize:13}}>
+        {neMapirano>0
+          ? <span>⚠️ <b>{neMapirano} artikala</b> nije automatski prepoznato — povežite ih ručno sa Mama Mantia artiklima.</span>
+          : <span>✅ <b>Svi artikli automatski prepoznati!</b> Možete nastaviti.</span>
+        }
+      </div>
+
+      <Card title="🔗 Mapiranje Šoljica → Mama Mantia artikli">
+        <div style={{fontSize:11,color:"#7A6545",marginBottom:12}}>Sistem je automatski pokušao prepoznati artikle. Provjerite i ispravite po potrebi.</div>
+        {sveSolStavke.map((s,i)=>{
+          const mId = mapping[s.naziv]||"";
+          const mProd = mamaProizvodi.find(p=>p.id===mId);
+          return(
+          <div key={i} style={{padding:"10px 12px",background:mId?"#F9FFF9":"#FFF8F5",borderRadius:8,border:`1px solid ${mId?"#C8E6C9":"#FFD5C5"}`,marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              {/* Naziv iz Šoljice + info */}
+              <div style={{minWidth:200,flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#1C1A17"}}>{s.naziv}</div>
+                <div style={{fontSize:11,color:"#7A6545"}}>{s.izlaz} jedinica × {s.cena.toLocaleString()} RSD = <b>{s.iznos.toLocaleString()} RSD</b></div>
+              </div>
+              <div style={{fontSize:20,color:mId?"#107C41":"#E0A000",flexShrink:0}}>→</div>
+              {/* Mama Mantia artikal */}
+              <select value={mId} onChange={e=>setMapping(m=>({...m,[s.naziv]:{...(m[s.naziv]||{}),prodId:e.target.value}}))}
+                style={{...S.input,flex:1,minWidth:180,background:mId?"#F0FFF0":"#FFFAF5",fontSize:12}}>
+                <option value="">— Nije u Mama Mantia —</option>
+                {getKat(data).map(k=>(
+                  <optgroup key={k.id} label={`${k.icon} ${k.naziv}`}>
+                    {k.proizvodi.map(p=><option key={p.id} value={p.id}>{p.naziv}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            {/* Množilac red — uvijek vidljiv ako je artikal mapiran */}
+            {mId&&<div style={{marginTop:8,paddingTop:8,borderTop:"1px dashed #E0D5BE",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flex:1,flexWrap:"wrap"}}>
+                <span style={{fontSize:12,color:"#5A4A35",fontWeight:600}}>📦 Komada po jedinici iz Šoljice:</span>
+                <input type="number" min="1" max="500"
+                  value={mapping[s.naziv]?.kol||1}
+                  onChange={e=>setMapping(m=>({...m,[s.naziv]:{...(m[s.naziv]||{}),kol:+e.target.value||1}}))}
+                  style={{...S.input,width:70,textAlign:"center",fontWeight:700,fontSize:14}}/>
+                {/* Brzi gumbi za česte vrijednosti */}
+                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                  {[1,5,10,30,60,120].map(v=>(
+                    <button key={v} onClick={()=>setMapping(m=>({...m,[s.naziv]:{...(m[s.naziv]||{}),kol:v}}))}
+                      style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${(mapping[s.naziv]?.kol||1)===v?"#1C1A17":"#E8DECA"}`,background:(mapping[s.naziv]?.kol||1)===v?"#1C1A17":"white",color:(mapping[s.naziv]?.kol||1)===v?"white":"#5A4A35",fontSize:12,cursor:"pointer",fontWeight:(mapping[s.naziv]?.kol||1)===v?700:400}}>
+                      {v=== 1?"1 kom":v===120?"Tepsija (120)":v===60?"Tepsija (60)":v===30?"Pola (30)":v+" kom"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Prikaz šta to znači */}
+              <div style={{background:"#FFF8DC",borderRadius:8,padding:"6px 12px",fontSize:12,color:"#5A4A35",flexShrink:0}}>
+                {s.izlaz} × {mapping[s.naziv]?.kol||1} = <b style={{color:"#C8860A",fontSize:14}}>{s.izlaz*(mapping[s.naziv]?.kol||1)} kom</b> skida se sa stanja
+              </div>
+            </div>}
+          </div>
+          );
+        })}
+      </Card>
+
+      <div style={{display:"flex",gap:10}}>
+        <Btn icon="◀️" label="Nazad" onClick={()=>setStep(1)} color="#7A6545"/>
+        <Btn icon="➡️" label="Pregled uvoza" onClick={()=>setStep(3)} color="#1C1A17" full/>
+      </div>
+    </div>
+  );
+
+  // ── STEP 3: Pregled ─────────────────────────────────────────────
+  if(step===3) {
+    const lok = LOKALI[selLok];
+    const mapirano = sveSolStavke.filter(s=>mapping[s.naziv]?.prodId);
+    const neMapi   = sveSolStavke.filter(s=>!mapping[s.naziv]?.prodId);
+    return (
+      <div style={{display:"flex",flexDirection:"column",gap:18}}>
+        <div style={{background:"#FFF8DC",border:"1px solid #E8D5A0",borderRadius:12,padding:"14px 18px",fontSize:13,lineHeight:1.8}}>
+          <b>📋 Pregled uvoza za {lok.icon} {lok.naziv} — {today()}</b><br/>
+          Provjerite podatke pa kliknite <b>"Potvrdi uvoz"</b>. Stanje robe u lokalu će biti ažurirano.
+        </div>
+
+        {/* Sumarni KPI */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
+          {[
+            {l:"Lokacija",  v:`${lok.icon} ${lok.naziv}`, c:"#1C1A17", bg:"#FAF6EE"},
+            {l:"Datum",     v:today(),                     c:"#C8860A", bg:"#FFF8DC"},
+            {l:"Prodano",   v:`${ukupnoKom} kom`,          c:"#107C41", bg:"#E8F5E9"},
+            {l:"Promet",    v:`${ukupnoSol.toLocaleString()} RSD`, c:"#1D4ED8", bg:"#EFF6FF"},
+            {l:"Mapirano",  v:`${mapirano.length}/${sveSolStavke.length}`, c:neMapirano>0?"#C00000":"#107C41", bg:neMapirano>0?"#FFF0F0":"#E8F5E9"},
+          ].map((k,i)=>(
+            <div key={i} style={{background:k.bg,borderRadius:10,padding:"12px 14px",border:`1px solid ${k.c}22`}}>
+              <div style={{fontFamily:"Georgia,serif",fontSize:17,fontWeight:800,color:k.c}}>{k.v}</div>
+              <div style={{fontSize:10,color:"#7A6545",marginTop:3,textTransform:"uppercase",letterSpacing:.5}}>{k.l}</div>
+            </div>
+          ))}
+        </div>
+
+        <Card title="📦 Artikli koji će biti uvezeni">
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <thead><tr style={{background:"#1C1A17"}}>
+                {["Šoljica naziv","→ Mama Mantia","Jed.","× Kol","= Komada","Promet","Stanje"].map(h=><th key={h} style={S.th}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {mapirano.map((s,i)=>{
+                  const p=mamaProizvodi.find(x=>x.id===mapping[s.naziv]?.prodId);
+                  const stan=(data.stanjeLokala||[]).find(x=>x.prodId===mapping[s.naziv]&&x.lokacija===selLok);
+                  const novo=Math.max(0,(stan?.kolicina||0)-s.izlaz);
+                  return(
+                  <tr key={i} style={{background:i%2===0?"white":"#FAF6EE"}}>
+                    <td style={{...S.td,color:"#7A6545",fontSize:11}}>{s.naziv}</td>
+                    <td style={{...S.td,fontWeight:700,fontSize:12}}>{p?.naziv||"?"}</td>
+                    <td style={{...S.td,textAlign:"center",color:"#5A4A35"}}>{s.solIzlaz||s.prodano}</td>
+                    <td style={{...S.td,textAlign:"center"}}>
+                      {s.kol>1
+                        ? <Tag bg="#FFF8DC" color="#C8860A">×{s.kol}</Tag>
+                        : <span style={{color:"#CCC"}}>×1</span>}
+                    </td>
+                    <td style={{...S.td,textAlign:"center",fontWeight:800,color:"#107C41",fontSize:15}}>{s.prodano}</td>
+                    <td style={{...S.td,textAlign:"right",fontWeight:700,color:"#C8860A"}}>{s.iznos.toLocaleString()}</td>
+                    <td style={{...S.td,textAlign:"center"}}>
+                      <span style={{color:"#7A6545"}}>{stan?.kolicina||0}</span>
+                      <span style={{color:"#999",margin:"0 4px"}}>→</span>
+                      <span style={{fontWeight:700,color:novo===0?"#C00000":"#107C41"}}>{novo}</span>
+                    </td>
+                  </tr>);
+                })}
+              </tbody>
+              <tfoot>
+                <tr style={{background:"#F5F0E8",fontWeight:700}}>
+                  <td style={{...S.td}} colSpan={2}>UKUPNO</td>
+                  <td style={{...S.td,textAlign:"center",fontSize:16,color:"#107C41"}}>{mapirano.reduce((s,x)=>s+x.izlaz,0)}</td>
+                  <td style={S.td}></td>
+                  <td style={{...S.td,textAlign:"right",fontSize:15,color:"#C8860A"}}>{mapirano.reduce((s,x)=>s+x.iznos,0).toLocaleString()} RSD</td>
+                  <td style={S.td}></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {neMapi.length>0&&(
+            <div style={{marginTop:12,background:"#FFF8DC",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#5A4A35"}}>
+              <b>ℹ️ Neuvezeni artikli</b> (nisu mapirani — biće evidentirani samo u prometu):<br/>
+              {neMapi.map(s=>`${s.naziv} (${s.izlaz} kom, ${s.iznos.toLocaleString()} RSD)`).join(" · ")}
+            </div>
+          )}
+        </Card>
+
+        <div style={{display:"flex",gap:10}}>
+          <Btn icon="◀️" label="Nazad" onClick={()=>setStep(2)} color="#7A6545"/>
+          <Btn icon="✅" label={`Potvrdi uvoz — ${LOKALI[selLok].naziv}`} onClick={potvrdiUvoz} color="#107C41" full/>
+        </div>
+      </div>
+    );
+  }
+
+  // ── STEP 4: Uspjeh ──────────────────────────────────────────────
+  if(step===4&&uvezena) {
+    const lok = LOKALI[uvezena.lokacija];
+    const prodUk = uvezena.stavke.reduce((s,x)=>s+(x.prodano||0),0);
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:18,alignItems:"center",padding:"30px 20px",textAlign:"center"}}>
+        <div style={{fontSize:64}}>✅</div>
+        <h2 style={{fontFamily:"Georgia,serif",color:"#1C1A17",margin:0}}>Uvoz Uspješan!</h2>
+        <div style={{background:"#E8F5E9",borderRadius:14,padding:"20px 30px",border:"1px solid #C8E6C9",width:"100%",maxWidth:400}}>
+          <div style={{fontSize:22,fontWeight:800,color:lok.boja,marginBottom:8}}>{lok.icon} {lok.naziv}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div><div style={{fontSize:22,fontWeight:800,color:"#107C41"}}>{prodUk}</div><div style={{fontSize:11,color:"#5A4A35"}}>Prodano (kom)</div></div>
+            <div><div style={{fontSize:20,fontWeight:800,color:"#C8860A"}}>{ukupnoSol.toLocaleString()}</div><div style={{fontSize:11,color:"#5A4A35"}}>Promet (RSD)</div></div>
+          </div>
+        </div>
+        <p style={{color:"#7A6545",fontSize:13,maxWidth:350}}>Stanje robe u lokalu je ažurirano. Zaključak smjene je sačuvan i vidljiv na Dashboardu i u Zaključcima.</p>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center"}}>
+          <Btn icon="📤" label="Uvezi novi fajl" onClick={()=>{setStep(1);setFajlovi({kuhinja:null,sank:null});setParsed({kuhinja:[],sank:[]});setMapping({});setUvezena(null);}} color="#1C1A17"/>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
 
 
 // ── UPRAVLJANJE PROIZVODIMA ───────────────────────────────────────
