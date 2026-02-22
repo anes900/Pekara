@@ -179,6 +179,7 @@ const ULOGE = {
   direktor:   { label:"Direktor",           icon:"👔", boja:"#C8860A", lokal:null,         canEdit:true,  canDelete:true,  canDeliver:true,  vidiCene:true  },
   magacioner: { label:"Magacioner",         icon:"🏭", boja:"#A07010", lokal:"proizvodnja", canEdit:true,  canDelete:false, canDeliver:true,  vidiCene:true  },
   radnik:     { label:"Radnik Proizvodnje", icon:"👨‍🍳", boja:"#C8860A", lokal:"proizvodnja", canEdit:true,  canDelete:false, canDeliver:false, vidiCene:false },
+  nadzor:     { label:"Nadzor / Vlasnik",   icon:"👁️",  boja:"#7B2FBE", lokal:null,         canEdit:false, canDelete:false, canDeliver:false, vidiCene:true,  canAddPro:true },
   prodavac1:  { label:"Prodavač Mama 1",    icon:"🏪", boja:"#107C41", lokal:"mama1",       canEdit:true,  canDelete:false, canDeliver:false, vidiCene:false },
   prodavac2:  { label:"Prodavač Mama 2",    icon:"🏬", boja:"#1D4ED8", lokal:"mama2",       canEdit:true,  canDelete:false, canDeliver:false, vidiCene:false },
 };
@@ -367,20 +368,20 @@ function App() {
   const myLokal = perms.lokal;
 
   const TABS = [
-    {key:"dashboard",  icon:"📊", label:"Dashboard",          roles:["direktor"]},
-    {key:"dnevnapro",  icon:"👨‍🍳", label:"Dnevna Proizvodnja", roles:["direktor","magacioner","radnik"]},
+    {key:"dashboard",  icon:"📊", label:"Dashboard",          roles:["direktor","nadzor"]},
+    {key:"dnevnapro",  icon:"👨‍🍳", label:"Dnevna Proizvodnja", roles:["direktor","magacioner","radnik","nadzor"]},
     {key:"dostava",    icon:"🚚", label:"Dostava",             roles:["direktor","magacioner"]},
-    {key:"lokali",     icon:"🏪", label:"Stanje Lokala",       roles:["direktor","magacioner","prodavac1","prodavac2"]},
+    {key:"lokali",     icon:"🏪", label:"Stanje Lokala",       roles:["direktor","magacioner","nadzor","prodavac1","prodavac2"]},
     {key:"evidencija", icon:"📋", label:"Evidencija",          roles:["direktor","prodavac1","prodavac2"]},
     {key:"smjena",     icon:"🏁", label:"Zaključak Smjene",    roles:["direktor","prodavac1","prodavac2"]},
     {key:"popis",      icon:"🔢", label:"Popis Zaliha",        roles:["direktor","prodavac1","prodavac2"]},
-    {key:"sirovine",   icon:"🌾", label:"Sirovine & Otpremnice", roles:["direktor","magacioner"]},
-    {key:"troskovi",   icon:"💰", label:"Troškovi",            roles:["direktor"]},
-    {key:"dobavljaci", icon:"📦", label:"Dobavljači",          roles:["direktor","magacioner"]},
+    {key:"sirovine",   icon:"🌾", label:"Sirovine & Otpremnice", roles:["direktor","magacioner","nadzor"]},
+    {key:"troskovi",   icon:"💰", label:"Troškovi",            roles:["direktor","nadzor"]},
+    {key:"dobavljaci", icon:"📦", label:"Dobavljači",          roles:["direktor","magacioner","nadzor"]},
     {key:"korisnici",  icon:"🔑", label:"Korisnici & PIN",     roles:["direktor"]},
     {key:"soljica",    icon:"📤", label:"Uvoz iz Šoljice",          roles:["direktor","prodavac1","prodavac2"]},
     {key:"proizvodi",  icon:"🛒", label:"Upravljanje Proizvodima", roles:["direktor"]},
-    {key:"aktivnost",  icon:"🕐", label:"Aktivnost",           roles:["direktor","magacioner","radnik","prodavac1","prodavac2"]},
+    {key:"aktivnost",  icon:"🕐", label:"Aktivnost",           roles:["direktor","magacioner","radnik","nadzor","prodavac1","prodavac2"]},
   ];
 
   const mojiTabovi = TABS.filter(t => t.roles.includes(session.uloga));
@@ -524,7 +525,7 @@ function TopBar({tab,tabs,saveSt,session,perms,myLokal}) {
 function KorisniciTab({korisnici,persistUsers}) {
   const [show,setShow]=useState(false); const [editId,setEdit]=useState(null);
   const [form,setF]=useState({ime:"",uloga:"prodavac1",pin:""}); const [sp,setSP]=useState({});
-  const pristup={direktor:["📊 Dashboard","👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","📋 Evidencija","🏁 Zaključak Smjene","🌾 Sirovine & Otpremnice","💰 Troškovi","📦 Dobavljači","🔑 Korisnici","🕐 Aktivnost"],magacioner:["👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","🌾 Sirovine & Otpremnice","📦 Dobavljači","🕐 Aktivnost"],radnik:["👨‍🍳 Dnevna Prizv. (unos)","🕐 Aktivnost"],prodavac1:["🏪 Stanje Mama 1","📋 Evidencija","🏁 Zaključak Smjene","📤 Uvoz iz Šoljice","🔢 Popis","🕐 Aktivnost"],prodavac2:["🏪 Stanje Mama 2","📋 Evidencija","🏁 Zaključak Smjene","📤 Uvoz iz Šoljice","🔢 Popis","🕐 Aktivnost"]};
+  const pristup={direktor:["📊 Dashboard","👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","📋 Evidencija","🏁 Zaključak Smjene","🌾 Sirovine & Otpremnice","💰 Troškovi","📦 Dobavljači","🔑 Korisnici","🕐 Aktivnost"],magacioner:["👨‍🍳 Dnevna Prizv.","🚚 Dostava","🏪 Stanje Lokala","🌾 Sirovine & Otpremnice","📦 Dobavljači","🕐 Aktivnost"],radnik:["👨‍🍳 Dnevna Prizv. (unos)","🕐 Aktivnost"],nadzor:["📊 Dashboard","👨‍🍳 Dnevna Prizv.","🏪 Stanje Lokala","🌾 Sirovine & Otpremnice","💰 Troškovi","📦 Dobavljači","🕐 Aktivnost"],prodavac1:["🏪 Stanje Mama 1","📋 Evidencija","🏁 Zaključak Smjene","📤 Uvoz iz Šoljice","🔢 Popis","🕐 Aktivnost"],prodavac2:["🏪 Stanje Mama 2","📋 Evidencija","🏁 Zaključak Smjene","📤 Uvoz iz Šoljice","🔢 Popis","🕐 Aktivnost"]};
   const saveK=()=>{if(!form.ime.trim()||form.pin.length<4){alert("Ime i PIN (min 4 cifre)!");return;}persistUsers(editId?korisnici.map(k=>k.id===editId?{...form,id:editId}:k):[...korisnici,{...form,id:Date.now()}]);setShow(false);setEdit(null);};
   return (
     <div style={{display:"flex",flexDirection:"column",gap:18}}>
