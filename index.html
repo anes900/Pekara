@@ -249,21 +249,21 @@ const fmtN   = n  => new Intl.NumberFormat("sr-RS").format(n||0);
 
 const SEED = {
   sirovine:[
-    {id:1,sifra:"SIR-001",naziv:"Brašno bijelo tip 500",kat:"Brašno",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:2,sifra:"SIR-002",naziv:"Brašno crno integralno",kat:"Brašno",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:3,sifra:"SIR-003",naziv:"Kvasac svježi",kat:"Dizalo",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:4,sifra:"SIR-004",naziv:"So kuhinjska",kat:"Začin",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:5,sifra:"SIR-005",naziv:"Šećer bijeli",kat:"Začin",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:6,sifra:"SIR-006",naziv:"Ulje suncokretovo",kat:"Mast",jm:"l",kolicina:0,cena:0,min:0,max:9999},
-    {id:7,sifra:"SIR-007",naziv:"Margarin biljni",kat:"Mast",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:8,sifra:"SIR-008",naziv:"Jaja L",kat:"Punjenje",jm:"kom",kolicina:0,cena:0,min:0,max:99999},
-    {id:9,sifra:"SIR-009",naziv:"Sir bijeli",kat:"Punjenje",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:10,sifra:"SIR-010",naziv:"Meso mljeveno",kat:"Punjenje",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:11,sifra:"SIR-011",naziv:"Spanać",kat:"Punjenje",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:12,sifra:"SIR-012",naziv:"Krompir",kat:"Punjenje",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:13,sifra:"SIR-013",naziv:"Kakao prah",kat:"Konditor",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:14,sifra:"SIR-014",naziv:"Sezam",kat:"Konditor",jm:"kg",kolicina:0,cena:0,min:0,max:9999},
-    {id:15,sifra:"SIR-015",naziv:"Kese za hleb",kat:"Ambalaža",jm:"kom",kolicina:0,cena:0,min:0,max:99999},
+    {id:1,sifra:"SIR-001",naziv:"Brašno bijelo tip 500",kat:"Brašno",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:2,sifra:"SIR-002",naziv:"Brašno crno integralno",kat:"Brašno",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:3,sifra:"SIR-003",naziv:"Kvasac svježi",kat:"Dizalo",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:4,sifra:"SIR-004",naziv:"So kuhinjska",kat:"Začin",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:5,sifra:"SIR-005",naziv:"Šećer bijeli",kat:"Začin",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:6,sifra:"SIR-006",naziv:"Ulje suncokretovo",kat:"Mast",jm:"l",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:7,sifra:"SIR-007",naziv:"Margarin biljni",kat:"Mast",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:8,sifra:"SIR-008",naziv:"Jaja L",kat:"Punjenje",jm:"kom",kolicina:0,cena:0,min:0,max:99999,tip:"okvirno"},
+    {id:9,sifra:"SIR-009",naziv:"Sir bijeli",kat:"Punjenje",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:10,sifra:"SIR-010",naziv:"Meso mljeveno",kat:"Punjenje",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:11,sifra:"SIR-011",naziv:"Spanać",kat:"Punjenje",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:12,sifra:"SIR-012",naziv:"Krompir",kat:"Punjenje",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:13,sifra:"SIR-013",naziv:"Kakao prah",kat:"Konditor",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:14,sifra:"SIR-014",naziv:"Sezam",kat:"Konditor",jm:"kg",kolicina:0,cena:0,min:0,max:9999,tip:"okvirno"},
+    {id:15,sifra:"SIR-015",naziv:"Kese za hleb",kat:"Ambalaža",jm:"kom",kolicina:0,cena:0,min:0,max:99999,tip:"okvirno"},
   ],
   stanjeLokala: genStanje(),
   dostave:[],evidencija:[],dnevnaProizvodnja:[],kretanja:[],popisi:[],
@@ -966,23 +966,47 @@ function Sirovine({data,persist,perms,session,addLog}) {
     <div style={{display:"flex",flexDirection:"column",gap:18}}>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
         <input value={filter} onChange={e=>setFil(e.target.value)} placeholder="🔍 Pretraga..." style={{...S.input,flex:1,minWidth:180,borderRadius:25}}/>
-        {perms.canEdit&&<><Btn icon="📥" label="Ulaz / Izlaz" onClick={()=>setMov(true)} color="#107C41"/><Btn icon="➕" label="Nova Sirovina" onClick={()=>{setAdd(true);setEId(null);setF({sifra:"",naziv:"",kat:"",jm:"kg",kolicina:"",cena:"",min:"",max:""});}} color="#C8860A"/></>}
+        {perms.canEdit&&<><Btn icon="📥" label="Ulaz / Izlaz" onClick={()=>setMov(true)} color="#107C41"/><Btn icon="➕" label="Nova Sirovina" onClick={()=>{setAdd(true);setEId(null);setF({sifra:"",naziv:"",kat:"",jm:"kg",kolicina:"",cena:"",min:"",max:"",tip:"okvirno"});}} color="#C8860A"/></>}
       </div>
       {Object.entries(grupe).map(([kat,items])=>(
-        <Card key={kat} title={kat}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{background:"#C8860A"}}>{["Šifra","Naziv","Jm","Kol.","Cena","Vrednost","Min","Status",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+        <Card key={kat} title={kat}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{background:"#C8860A"}}>{["Šifra","Naziv","Tip","Jm","Kol.","Cena","Vrednost","Min","Status",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <tbody>{items.map((s,i)=>{const st=s.min>0&&s.kolicina<=s.min?"NISKO":"OK";return<tr key={s.id} style={{background:i%2===0?"white":"#FAF6EE"}}>
-            <td style={S.td}><Tag bg="#E8D5A0" color="#C8860A">{s.sifra}</Tag></td><td style={{...S.td,fontWeight:600}}>{s.naziv}</td><td style={{...S.td,textAlign:"center"}}>{s.jm}</td>
+            <td style={S.td}><Tag bg="#E8D5A0" color="#C8860A">{s.sifra}</Tag></td><td style={{...S.td,fontWeight:600}}>{s.naziv}</td>
+            <td style={{...S.td,textAlign:"center"}}>
+              {(s.tip||"okvirno")==="precizno"&&<Tag bg="#FFEBEE" color="#C00000">🔴 Precizno</Tag>}
+              {(s.tip||"okvirno")==="okvirno"&&<Tag bg="#FFFDE7" color="#C8860A">🟡 Okvirno</Tag>}
+              {(s.tip||"okvirno")==="nabavka"&&<Tag bg="#F5F5F5" color="#7A6545">⚪ Nabavka</Tag>}
+            </td>
+            <td style={{...S.td,textAlign:"center"}}>{s.jm}</td>
             <td style={{...S.td,textAlign:"right",fontWeight:700,color:s.min>0&&s.kolicina<=s.min?"#C00000":"#1C1A17"}}>{fmtN(s.kolicina)}</td>
             <td style={{...S.td,textAlign:"right"}}>{fmtN(s.cena)}</td><td style={{...S.td,textAlign:"right",fontWeight:700,color:"#107C41"}}>{fmt(s.kolicina*s.cena)}</td>
             <td style={{...S.td,textAlign:"right"}}>{fmtN(s.min)}</td>
             <td style={S.td}><Tag bg={st==="OK"?"#E8F5E9":"#FFF0F0"} color={st==="OK"?"#107C41":"#C00000"}>{st==="OK"?"✅ OK":"⚠️ NISKO"}</Tag></td>
-            <td style={S.td}>{perms.canEdit&&<button onClick={()=>{setEId(s.id);setF({sifra:s.sifra,naziv:s.naziv,kat:s.kat,jm:s.jm,kolicina:s.kolicina,cena:s.cena,min:s.min,max:s.max});setAdd(true);}} style={S.btn2}>✏️</button>}{perms.canDelete&&<button onClick={()=>{if(window.confirm("Obrisati?"))persist(addLog({...data,sirovine:(data.sirovine||[]).filter(x=>x.id!==s.id)},`Obrisao: ${s.naziv}`));}} style={{...S.btn2,background:"#FFF0F0",color:"#C00000"}}>🗑️</button>}</td>
+            <td style={S.td}>{perms.canEdit&&<button onClick={()=>{setEId(s.id);setF({sifra:s.sifra,naziv:s.naziv,kat:s.kat,jm:s.jm,kolicina:s.kolicina,cena:s.cena,min:s.min,max:s.max,tip:s.tip||"okvirno"});setAdd(true);}} style={S.btn2}>✏️</button>}{perms.canDelete&&<button onClick={()=>{if(window.confirm("Obrisati?"))persist(addLog({...data,sirovine:(data.sirovine||[]).filter(x=>x.id!==s.id)},`Obrisao: ${s.naziv}`));}} style={{...S.btn2,background:"#FFF0F0",color:"#C00000"}}>🗑️</button>}</td>
           </tr>;})}
           </tbody></table></div>
         </Card>
       ))}
       {showAdd&&<Modal title={editId?"✏️ Uredi":"➕ Nova Sirovina"} onClose={()=>{setAdd(false);setEId(null);}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["sifra","Šifra","text"],["naziv","Naziv","text"],["kat","Kategorija","text"],["jm","Jed. Mere","text"],["kolicina","Količina","number"],["cena","Cena (RSD/jm)","number"],["min","Min Zaliha","number"],["max","Max Zaliha","number"]].map(([k,l,t])=><div key={k}><label style={S.label}>{l}</label><input value={form[k]} onChange={e=>setF(f=>({...f,[k]:e.target.value}))} style={S.input} type={t}/></div>)}</div>
+        
+        <div style={{marginTop:14}}>
+          <label style={S.label}>Tip praćenja</label>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            {[
+              {v:"precizno", l:"🔴 Precizno", opis:"Skup materijal — tačan gram"},
+              {v:"okvirno",  l:"🟡 Okvirno",  opis:"Važna sirovina — periodični popis"},
+              {v:"nabavka",  l:"⚪ Samo nabavka", opis:"Sitnica — samo trošak"}
+            ].map(t=>(
+              <button key={t.v} onClick={()=>setF(f=>({...f,tip:t.v}))}
+                style={{flex:1,padding:"8px 6px",borderRadius:8,border:"2px solid "+(form.tip===t.v?"#C8860A":"#E8DECA"),
+                  background:form.tip===t.v?"#FFF8DC":"white",cursor:"pointer",textAlign:"center"}}>
+                <div style={{fontSize:12,fontWeight:700}}>{t.l}</div>
+                <div style={{fontSize:10,color:"#7A6545",marginTop:2}}>{t.opis}</div>
+              </button>
+            ))}
+          </div>
+        </div>
         <div style={{display:"flex",gap:10,marginTop:18}}><Btn icon="💾" label="Sačuvaj" onClick={saveS} color="#C8860A" full/><Btn icon="✕" label="Otkaži" onClick={()=>{setAdd(false);setEId(null);}} color="#7A6545" full/></div>
       </Modal>}
       {showMov&&<Modal title="📥 Ulaz / Izlaz Sirovine" onClose={()=>setMov(false)}>
@@ -2081,6 +2105,129 @@ function UvozSoljica({data, persist, session, myLokal, addLog}) {
 
 
 // ── ANALITIKA & IZVJEŠTAJI ────────────────────────────────────────
+// ── PROFIT TAB ────────────────────────────────────────────────────
+function ProfitTab({data, filterByPeriod, period}) {
+  // Prihodi - iz evidencije
+  const evid = filterByPeriod(data.evidencija||[], "datum");
+  const ukPrihod = evid.reduce((s,e)=>s+(e.ukupno||0), 0);
+
+  // Trošak sirovina iz kretanja (ULAZ = nabavka = trošak)
+  const kret = filterByPeriod(data.kretanja||[], "datum");
+  const ukSirovine = kret.filter(k=>k.vrsta==="ULAZ").reduce((s,k)=>s+(k.kolicina||0)*(k.cena||0), 0);
+
+  // Fiksni troškovi
+  const tros = filterByPeriod(data.troskoviMesecni||[], "datum");
+  const ukTroskovi = tros.reduce((s,t)=>s+(t.iznos||0), 0);
+
+  const ukRashod = ukSirovine + ukTroskovi;
+  const profit = ukPrihod - ukRashod;
+  const margin = ukPrihod>0 ? Math.round((profit/ukPrihod)*100) : 0;
+
+  const periodLabel = {month:"30 dana","3month":"3 mj.","6month":"6 mj.",year:"Godina",all:"Sve"}[period]||period;
+
+  // Top sirovine po trošku
+  const sirovinaMap = {};
+  kret.filter(k=>k.vrsta==="ULAZ").forEach(k=>{
+    const key = k.naziv||k.siroId;
+    if(!sirovinaMap[key]) sirovinaMap[key] = {naziv:key, iznos:0};
+    sirovinaMap[key].iznos += (k.kolicina||0)*(k.cena||0);
+  });
+  const topSirovine = Object.values(sirovinaMap).sort((a,b)=>b.iznos-a.iznos).slice(0,5);
+
+  // Top troškovi
+  const trosMap = {};
+  tros.forEach(t=>{
+    const key = t.naziv||t.kategorija||"Ostalo";
+    if(!trosMap[key]) trosMap[key] = {naziv:key, iznos:0};
+    trosMap[key].iznos += t.iznos||0;
+  });
+  const topTros = Object.values(trosMap).sort((a,b)=>b.iznos-a.iznos).slice(0,5);
+
+  const KPI = ({icon,label,value,color,bg}) => (
+    <div style={{background:bg||"white",borderRadius:12,padding:"16px 18px",border:"1px solid #E8DECA",textAlign:"center"}}>
+      <div style={{fontSize:28}}>{icon}</div>
+      <div style={{fontSize:11,color:"#7A6545",fontWeight:600,marginTop:4}}>{label}</div>
+      <div style={{fontSize:20,fontWeight:800,color:color||"#1C1A17",marginTop:4}}>{value}</div>
+    </div>
+  );
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+      {/* Header */}
+      <div style={{background:"linear-gradient(135deg,#1C1A17,#2A2318)",borderRadius:14,padding:"14px 18px",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{fontSize:32}}>💹</div>
+        <div>
+          <div style={{color:"#E8A020",fontFamily:"Georgia,serif",fontSize:16,fontWeight:800}}>Profit / Gubitak</div>
+          <div style={{color:"rgba(255,255,255,.5)",fontSize:12,marginTop:2}}>Period: {periodLabel}</div>
+        </div>
+      </div>
+
+      {/* KPI kartice */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
+        <KPI icon="💰" label="Ukupni prihod" value={fmt(ukPrihod)} color="#107C41" bg="#F0FFF4"/>
+        <KPI icon="🌾" label="Trošak sirovina" value={fmt(ukSirovine)} color="#C00000" bg="#FFF0F0"/>
+        <KPI icon="📋" label="Fiksni troškovi" value={fmt(ukTroskovi)} color="#C8860A" bg="#FFF8DC"/>
+        <KPI icon={profit>=0?"📈":"📉"} label="Profit / Gubitak" value={fmt(profit)} color={profit>=0?"#107C41":"#C00000"} bg={profit>=0?"#F0FFF4":"#FFF0F0"}/>
+        <KPI icon="%" label="Marža" value={margin+"%"} color={margin>=30?"#107C41":margin>=0?"#C8860A":"#C00000"}/>
+      </div>
+
+      {/* Pregled rashoda */}
+      <Card title="📊 Pregled rashoda">
+        {ukRashod===0
+          ? <p style={{color:"#7A6545",fontSize:13,textAlign:"center",padding:16}}>Nema rashoda u odabranom periodu.</p>
+          : (
+            <div>
+              {[
+                {naziv:"Sirovine & nabavka", iznos:ukSirovine, boja:"#C00000", bg:"#FFF0F0"},
+                {naziv:"Fiksni troškovi", iznos:ukTroskovi, boja:"#C8860A", bg:"#FFF8DC"},
+              ].map(r=>(
+                <div key={r.naziv} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                  <div style={{flex:1,fontSize:13,fontWeight:600}}>{r.naziv}</div>
+                  <div style={{width:200,background:"#F5F0E8",borderRadius:20,height:10,overflow:"hidden"}}>
+                    <div style={{width:(ukRashod>0?Math.round((r.iznos/ukRashod)*100):0)+"%",height:"100%",background:r.boja,borderRadius:20}}/>
+                  </div>
+                  <div style={{fontWeight:700,color:r.boja,width:80,textAlign:"right"}}>{fmt(r.iznos)}</div>
+                </div>
+              ))}
+            </div>
+          )
+        }
+      </Card>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        {/* Top sirovine */}
+        <Card title="🌾 Top troškovi sirovina">
+          {topSirovine.length===0
+            ? <p style={{color:"#7A6545",fontSize:12,padding:8}}>Nema podataka.</p>
+            : topSirovine.map((s,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #F5F0E8",fontSize:13}}>
+                <span>{s.naziv}</span>
+                <span style={{fontWeight:700,color:"#C00000"}}>{fmt(s.iznos)}</span>
+              </div>
+            ))
+          }
+        </Card>
+
+        {/* Top fiksni troškovi */}
+        <Card title="📋 Top fiksni troškovi">
+          {topTros.length===0
+            ? <p style={{color:"#7A6545",fontSize:12,padding:8}}>Nema podataka.</p>
+            : topTros.map((t,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #F5F0E8",fontSize:13}}>
+                <span>{t.naziv}</span>
+                <span style={{fontWeight:700,color:"#C8860A"}}>{fmt(t.iznos)}</span>
+              </div>
+            ))
+          }
+        </Card>
+      </div>
+
+    </div>
+  );
+}
+
+
 function Analitika({data}) {
   const [tab,    setTab]    = useState("prodaja");
   const [period, setPeriod] = useState("month"); // month | 3month | 6month | year | all
@@ -2238,6 +2385,7 @@ function Analitika({data}) {
           {k:"mjeseci",   l:"📅 Mjesečni promet"},
           {k:"sirovine",  l:"🌾 Potrošnja sirovina"},
           {k:"lokali",    l:"🏪 Lokali usporedba"},
+          {k:"profit",    l:"💹 Profit / Gubitak"},
         ].map(t=>(
           <button key={t.k} onClick={()=>setTab(t.k)}
             style={{padding:"8px 14px",borderRadius:8,border:"none",
@@ -2505,6 +2653,10 @@ function Analitika({data}) {
             </Card>
           )}
         </div>
+      )}
+
+      {tab==="profit"&&(
+        <ProfitTab data={data} filterByPeriod={filterByPeriod} period={period}/>
       )}
     </div>
   );
