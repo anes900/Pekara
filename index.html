@@ -86,8 +86,8 @@ input:focus,select:focus{outline:2px solid #E8A020;outline-offset:1px}
 </style>
 
 <!-- KORAK 1: Firebase CDN (mora biti PRVO) -->
-<script src="https://unpkg.com/firebase@9.23.0/compat/app.js"></script>
-<script src="https://unpkg.com/firebase@9.23.0/compat/database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- KORAK 2: Firebase inicijalizacija (NAKON CDN) -->
 <script>
@@ -275,16 +275,14 @@ const SEED = {
 // ═══════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════
-// Izračunava trošak sirovina po komaду na osnovu normativa
 function getCijenuProizvoda(prodId, data) {
-  const norm = (data.normativi||[]).find(n=>n.prodId===prodId);
+  var norm = (data.normativi||[]).find(function(n){return n.prodId===prodId;});
   if(!norm||!norm.stavke||!norm.stavke.length) return null;
-  return norm.stavke.reduce((s,st)=>{
-    const sir=(data.sirovine||[]).find(x=>x.id===st.siroId);
-    return s + st.kolicina*(sir?.cena||0);
-  },0);
+  return norm.stavke.reduce(function(s,st){
+    var sir = (data.sirovine||[]).find(function(x){return x.id===st.siroId;});
+    return s + st.kolicina*(sir ? (sir.cena||0) : 0);
+  }, 0);
 }
-
 
 function App() {
   const [data,     setData]   = useState(null);
@@ -391,7 +389,7 @@ function App() {
     {key:"dobavljaci", icon:"📦", label:"Dobavljači",          roles:["direktor","magacioner","nadzor"]},
     {key:"korisnici",  icon:"🔑", label:"Korisnici & PIN",     roles:["direktor"]},
     {key:"soljica",    icon:"📤", label:"Uvoz iz Šoljice",          roles:["direktor","prodavac1","prodavac2"]},
-    {key:"normativi",  icon:"📐", label:"Normativi",               roles:["direktor","nadzor"]},
+    {key:"normativi",  icon:"📐", label:"Normativi", roles:["direktor","nadzor"]},
     {key:"proizvodi",  icon:"🛒", label:"Upravljanje Proizvodima", roles:["direktor"]},
     {key:"analitika",  icon:"📈", label:"Analitika & Izvještaji", roles:["direktor","nadzor"]},
     {key:"aktivnost",  icon:"🕐", label:"Aktivnost",           roles:["direktor","magacioner","radnik","nadzor","prodavac1","prodavac2"]},
@@ -418,7 +416,7 @@ function App() {
           {validTab==="dobavljaci" && <Dobavljaci  data={data} persist={persist} perms={perms} session={session} addLog={addLog} />}
           {validTab==="korisnici"  && <KorisniciTab korisnici={korisnici} persistUsers={persistUsers} />}
           {validTab==="soljica"    && <UvozSoljica data={data} persist={persist} session={session} myLokal={myLokal} addLog={addLog} />}
-          {validTab==="normativi"  && <Normativi  data={data} persist={persist} session={session} addLog={addLog} />}
+          {validTab==="normativi"  && <Normativi data={data} persist={persist} session={session} addLog={addLog} />}
           {validTab==="proizvodi"  && <UpravljanjeProizvodima data={data} persist={persist} />}
           {validTab==="analitika"  && <Analitika   data={data} />}
           {validTab==="aktivnost"  && <Aktivnost   data={data} session={session} />}
@@ -705,24 +703,23 @@ function Dostava({data,persist,perms,session,addLog}) {
     for(const st of arr){const pr=(data.stanjeLokala||[]).find(s=>s.prodId===st.prodId&&s.lokacija==="proizvodnja");if(!pr||pr.kolicina<st.kolicina){const p=getSviP(data).find(x=>x.id===st.prodId);alert(`Nema dovoljno "${p?.naziv}"! Dostupno: ${pr?.kolicina||0}`);return;}}
     const lok=LOKALI[selLok]; let ns=[...(data.stanjeLokala||[])];
     arr.forEach(st=>{ns=ns.map(s=>s.prodId===st.prodId&&s.lokacija==="proizvodnja"?{...s,kolicina:s.kolicina-st.kolicina}:s.prodId===st.prodId&&s.lokacija===selLok?{...s,kolicina:s.kolicina+st.kolicina}:s);});
-    // Automatski odbitak sirovina prema normativima
-    let nsS=[...(data.sirovine||[])];
-    let kretanja=[...(data.kretanja||[])];
-    let nextKr=data.nextId.kretanja||1;
-    arr.forEach(st=>{
-      const norm=(data.normativi||[]).find(n=>n.prodId===st.prodId);
+    // Odbitak sirovina po normativima
+    var nsS=[...(data.sirovine||[])];
+    var novKret=[...(data.kretanja||[])];
+    var nKrId=data.nextId.kretanja||1;
+    arr.forEach(function(st){
+      var norm=(data.normativi||[]).find(function(n){return n.prodId===st.prodId;});
       if(!norm) return;
-      norm.stavke.forEach(nst=>{
-        const potrebno=nst.kolicina*st.kolicina;
-        nsS=nsS.map(s=>s.id===nst.siroId?{...s,kolicina:Math.max(0,(s.kolicina||0)-potrebno)}:s);
-        kretanja.push({id:nextKr++,siroId:nst.siroId,naziv:nst.naziv,vrsta:"IZLAZ",
-          kolicina:potrebno,cena:0,datum:today(),napomena:"Normativ: "+((getSviP(data).find(p=>p.id===st.prodId))?.naziv||st.prodId)+" x "+st.kolicina+" kom"});
+      norm.stavke.forEach(function(nst){
+        var potr=nst.kolicina*st.kolicina;
+        nsS=nsS.map(function(s){return s.id===nst.siroId?{...s,kolicina:Math.max(0,(s.kolicina||0)-potr)}:s;});
+        novKret.push({id:nKrId++,siroId:nst.siroId,naziv:nst.naziv,vrsta:"IZLAZ",kolicina:potr,cena:0,datum:today(),napomena:"Auto normativ"});
       });
     });
-    persist(addLog({...data,stanjeLokala:ns,sirovine:nsS,kretanja,
+    persist(addLog({...data,stanjeLokala:ns,sirovine:nsS,kretanja:novKret,
       dostave:[{id:data.nextId.dostave,lokacija:selLok,lokNaziv:lok.naziv,datum:today(),vreme:nowStr(),stavke:arr,korisnik:session.ime},...(data.dostave||[])],
-      nextId:{...data.nextId,dostave:data.nextId.dostave+1,kretanja:nextKr}},
-      "Dostava u "+lok.naziv+": "+arr.reduce((s,x)=>s+x.kolicina,0)+" kom"));
+      nextId:{...data.nextId,dostave:data.nextId.dostave+1,kretanja:nKrId}},
+      "Dostava u "+lok.naziv+": "+arr.reduce(function(s,x){return s+x.kolicina;},0)+" kom"));
     setShow(false);
   };
   return (
@@ -2517,225 +2514,147 @@ function Analitika({data}) {
 // ── UPRAVLJANJE PROIZVODIMA ───────────────────────────────────────
 // ── NORMATIVI ──────────────────────────────────────────────────────
 function Normativi({data, persist, session, addLog}) {
-  const [selProd, setSelProd] = React.useState(null);
-  const [showForm, setShowForm] = React.useState(false);
-  const [stavke, setStavke] = React.useState([]);
-  const [filter, setFilter] = React.useState("");
-
+  const [selProd, setSelProd] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [stavke, setStavke] = useState([]);
+  const [filter, setFilter] = useState("");
   const sviP = getSviP(data);
   const perms = ULOGE[session.uloga]||{};
 
-  // Otvori editor za proizvod
   const otvoriEditor = (prod) => {
-    const existing = (data.normativi||[]).find(n=>n.prodId===prod.id);
+    const ex = (data.normativi||[]).find(n=>n.prodId===prod.id);
     setSelProd(prod);
-    setStavke(existing ? existing.stavke.map(s=>({...s})) : []);
+    setStavke(ex ? ex.stavke.map(s=>({...s})) : []);
     setShowForm(true);
   };
 
-  // Dodaj praznu stavku
-  const dodajStavku = () => {
-    setStavke(prev=>[...prev,{siroId:"",naziv:"",kolicina:"",jm:""}]);
-  };
+  const dodajStavku = () => setStavke(prev=>[...prev,{siroId:"",naziv:"",kolicina:"",jm:""}]);
 
-  // Izmijeni stavku
-  const izmijeniStavku = (idx, field, val) => {
-    setStavke(prev=>prev.map((s,i)=>{
-      if(i!==idx) return s;
-      if(field==="siroId") {
-        const sir=(data.sirovine||[]).find(x=>x.id===+val);
-        return {...s, siroId:+val, naziv:sir?.naziv||"", jm:sir?.jm||""};
-      }
-      return {...s, [field]:val};
-    }));
-  };
+  const izmijeniStavku = (i, field, val) => setStavke(prev=>prev.map((s,idx)=>{
+    if(idx!==i) return s;
+    if(field==="siroId"){
+      const sir=(data.sirovine||[]).find(x=>x.id===+val);
+      return {...s, siroId:+val, naziv:sir?sir.naziv:"", jm:sir?sir.jm:""};
+    }
+    return {...s, [field]:val};
+  }));
 
-  // Ukloni stavku
-  const ukloniStavku = (idx) => {
-    setStavke(prev=>prev.filter((_,i)=>i!==idx));
-  };
+  const ukloniStavku = (i) => setStavke(prev=>prev.filter((_,idx)=>idx!==i));
 
-  // Sačuvaj normativ
   const sacuvaj = () => {
     if(!selProd) return;
     const validne = stavke.filter(s=>s.siroId&&+s.kolicina>0);
-    if(!validne.length) { alert("Dodajte bar jednu sirovinu sa količinom!"); return; }
-    const noviNorm = {prodId:selProd.id,stavke:validne.map(s=>({
-      siroId:s.siroId, naziv:s.naziv, kolicina:+s.kolicina, jm:s.jm
-    }))};
+    if(!validne.length){ alert("Dodajte bar jednu sirovinu!"); return; }
+    const noviN = {prodId:selProd.id, stavke:validne.map(s=>({siroId:s.siroId,naziv:s.naziv,kolicina:+s.kolicina,jm:s.jm}))};
     const ostali = (data.normativi||[]).filter(n=>n.prodId!==selProd.id);
-    persist(addLog({...data, normativi:[noviNorm,...ostali]},
-      "Normativ: "+selProd.naziv));
+    persist(addLog({...data,normativi:[noviN,...ostali]}, "Normativ: "+selProd.naziv));
     setShowForm(false);
   };
 
-  // Obriši normativ
   const obrisi = (prodId) => {
     if(!window.confirm("Obrisati normativ?")) return;
     const prod = sviP.find(p=>p.id===prodId);
-    persist(addLog({...data, normativi:(data.normativi||[]).filter(n=>n.prodId!==prodId)},
-      "Obrisan normativ: "+(prod?.naziv||prodId)));
+    persist(addLog({...data,normativi:(data.normativi||[]).filter(n=>n.prodId!==prodId)},
+      "Obrisan normativ: "+(prod?prod.naziv:prodId)));
   };
 
-  // Trošak stavki u editoru
   const trosakEditora = stavke.filter(s=>s.siroId&&+s.kolicina>0).reduce((s,st)=>{
     const sir=(data.sirovine||[]).find(x=>x.id===+st.siroId);
-    return s + +st.kolicina*(sir?.cena||0);
+    return s + +st.kolicina*(sir?sir.cena||0:0);
   },0);
 
-  const filtrirani = sviP.filter(p=>
-    !filter || p.naziv.toLowerCase().includes(filter.toLowerCase()) ||
-    p.kat.toLowerCase().includes(filter.toLowerCase())
-  );
-
-  // Grupiši po kategoriji
-  const poKategoriji = {};
+  const filtrirani = sviP.filter(p=>!filter||p.naziv.toLowerCase().includes(filter.toLowerCase()));
+  const poKat = {};
   filtrirani.forEach(p=>{
-    if(!poKategoriji[p.kat]) poKategoriji[p.kat]={icon:p.katIcon||"📦",naziv:p.kat,boja:p.katBoja||"#C8860A",proizvodi:[]};
-    poKategoriji[p.kat].proizvodi.push(p);
+    if(!poKat[p.kat]) poKat[p.kat]={naziv:p.kat, proizvodi:[]};
+    poKat[p.kat].proizvodi.push(p);
   });
-
-  const ukNorma = (data.normativi||[]).length;
-  const ukProd  = sviP.length;
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
-
-      {/* Header */}
-      <div style={{background:"linear-gradient(135deg,#1C1A17,#2A2318)",borderRadius:14,padding:"16px 20px",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
-        <div style={{fontSize:36}}>📐</div>
-        <div style={{flex:1}}>
-          <div style={{color:"#E8A020",fontFamily:"Georgia,serif",fontSize:18,fontWeight:800}}>Normativi — Recepture</div>
-          <div style={{color:"rgba(255,255,255,.6)",fontSize:12,marginTop:3}}>
-            {ukNorma}/{ukProd} proizvoda ima normativ · Automatski odbitak sirovina na dostavi
-          </div>
+      <div style={{background:"linear-gradient(135deg,#1C1A17,#2A2318)",borderRadius:14,padding:"16px 20px"}}>
+        <div style={{color:"#E8A020",fontFamily:"Georgia,serif",fontSize:18,fontWeight:800}}>📐 Normativi — Recepture</div>
+        <div style={{color:"rgba(255,255,255,.6)",fontSize:12,marginTop:4}}>
+          {(data.normativi||[]).length}/{sviP.length} proizvoda ima normativ
         </div>
       </div>
 
-      {/* Filter */}
-      <input
-        placeholder="🔍 Pretraži proizvode..."
-        value={filter} onChange={e=>setFilter(e.target.value)}
-        style={{...S.input,fontSize:14}}
-      />
+      <input placeholder="🔍 Pretraži..." value={filter} onChange={e=>setFilter(e.target.value)} style={S.input}/>
 
-      {/* Proizvodi po kategorijama */}
-      {Object.values(poKategoriji).map(kat=>(
+      {Object.values(poKat).map(kat=>(
         <div key={kat.naziv}>
-          <div style={{fontWeight:800,fontSize:13,color:kat.boja,padding:"6px 2px",borderBottom:"2px solid "+kat.boja+"44",marginBottom:8}}>
-            {kat.naziv}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {kat.proizvodi.map(prod=>{
-              const norm = (data.normativi||[]).find(n=>n.prodId===prod.id);
-              const trosak = getCijenuProizvoda(prod.id, data);
-              const cijP   = data.cijene?.[prod.id]?.maloprodaja||0;
-              const marza  = cijP>0&&trosak!=null ? Math.round(((cijP-trosak)/cijP)*100) : null;
-              return (
-              <div key={prod.id} style={{background:"white",borderRadius:10,padding:"10px 14px",border:"1px solid "+(norm?"#C8E6C9":"#F0E0C8"),display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div style={{fontWeight:800,fontSize:12,color:"#C8860A",padding:"4px 0",borderBottom:"2px solid #E8D5A0",marginBottom:8}}>{kat.naziv}</div>
+          {kat.proizvodi.map(prod=>{
+            const norm = (data.normativi||[]).find(n=>n.prodId===prod.id);
+            const trosak = getCijenuProizvoda(prod.id, data);
+            const cijP = data.cijene&&data.cijene[prod.id]?data.cijene[prod.id].maloprodaja||0:0;
+            const marza = cijP>0&&trosak!=null ? Math.round(((cijP-trosak)/cijP)*100) : null;
+            return (
+              <div key={prod.id} style={{background:"white",borderRadius:10,padding:"10px 14px",border:"1px solid "+(norm?"#C8E6C9":"#F0E0C8"),display:"flex",alignItems:"center",gap:10,marginBottom:6,flexWrap:"wrap"}}>
                 <div style={{flex:1,minWidth:120}}>
                   <div style={{fontWeight:700,fontSize:13}}>{prod.naziv}</div>
-                  {norm && (
-                    <div style={{fontSize:11,color:"#5A4A35",marginTop:3}}>
-                      {norm.stavke.map(s=>s.kolicina+" "+s.jm+" "+s.naziv).join(" · ")}
-                    </div>
-                  )}
-                  {trosak!=null && (
-                    <div style={{fontSize:11,marginTop:3,display:"flex",gap:8}}>
+                  {norm&&<div style={{fontSize:11,color:"#5A4A35",marginTop:2}}>{norm.stavke.map(s=>s.kolicina+" "+s.jm+" "+s.naziv).join(" · ")}</div>}
+                  {trosak!=null&&(
+                    <div style={{fontSize:11,marginTop:2,display:"flex",gap:8}}>
                       <span style={{color:"#C00000",fontWeight:700}}>Trošak: {trosak.toFixed(2)} RSD</span>
-                      {marza!==null && (
-                        <span style={{color:marza>=30?"#107C41":marza>=0?"#C8860A":"#C00000",fontWeight:700}}>
-                          Marža: {marza}%
-                        </span>
-                      )}
+                      {marza!==null&&<span style={{color:marza>=30?"#107C41":marza>=0?"#C8860A":"#C00000",fontWeight:700}}>Marža: {marza}%</span>}
                     </div>
                   )}
                 </div>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <div style={{display:"flex",gap:6}}>
                   {norm
                     ? <span style={{background:"#E8F5E9",color:"#107C41",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20}}>✅ {norm.stavke.length} sir.</span>
                     : <span style={{background:"#FFF3E0",color:"#C8860A",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20}}>⚠️ Nema</span>
                   }
-                  {perms.canEdit && (
-                    <button onClick={()=>otvoriEditor(prod)}
-                      style={{padding:"5px 12px",borderRadius:8,border:"1px solid #C8860A",background:"#FFF8DC",color:"#C8860A",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  {perms.canEdit&&(
+                    <button onClick={()=>otvoriEditor(prod)} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #C8860A",background:"#FFF8DC",color:"#C8860A",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                       {norm?"✏️ Uredi":"➕ Dodaj"}
                     </button>
                   )}
-                  {norm && perms.canEdit && (
-                    <button onClick={()=>obrisi(prod.id)}
-                      style={{padding:"5px 8px",borderRadius:8,border:"1px solid #FFCCCC",background:"#FFF0F0",color:"#C00000",fontSize:12,cursor:"pointer"}}>🗑️</button>
+                  {norm&&perms.canEdit&&(
+                    <button onClick={()=>obrisi(prod.id)} style={{padding:"5px 8px",borderRadius:8,border:"1px solid #FFCCCC",background:"#FFF0F0",color:"#C00000",fontSize:12,cursor:"pointer"}}>🗑️</button>
                   )}
                 </div>
-              </div>);
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       ))}
 
-      {/* Modal - editor normativa */}
-      {showForm && selProd && (
+      {showForm&&selProd&&(
         <Modal title={"📐 Normativ — "+selProd.naziv} onClose={()=>setShowForm(false)}>
-          <p style={{fontSize:12,color:"#7A6545",margin:"0 0 12px"}}>
-            Unesite koliko svake sirovine ide u <b>1 komad</b> ovog proizvoda.
-          </p>
-
-          {/* Stavke */}
+          <p style={{fontSize:12,color:"#7A6545",margin:"0 0 12px"}}>Koliko svake sirovine ide u <b>1 komad</b>.</p>
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
-            {stavke.map((st,idx)=>{
+            {stavke.map((st,i)=>{
               const sir=(data.sirovine||[]).find(x=>x.id===+st.siroId);
               const cijSt=sir&&+st.kolicina>0?+st.kolicina*(sir.cena||0):0;
-              return (
-              <div key={idx} style={{display:"flex",gap:6,alignItems:"center",background:"#FAFAF5",padding:"8px 10px",borderRadius:8,border:"1px solid #E8DECA"}}>
-                <select value={st.siroId} onChange={e=>izmijeniStavku(idx,"siroId",e.target.value)}
-                  style={{...S.input,flex:2,fontSize:12}}>
-                  <option value="">— Sirovina —</option>
-                  {(data.sirovine||[]).map(s=>(
-                    <option key={s.id} value={s.id}>{s.naziv} ({s.jm})</option>
-                  ))}
-                </select>
-                <input type="number" min="0" step="0.001" placeholder="Količina"
-                  value={st.kolicina} onChange={e=>izmijeniStavku(idx,"kolicina",e.target.value)}
-                  style={{...S.input,width:90,textAlign:"right"}}/>
-                <span style={{fontSize:11,color:"#7A6545",width:24,flexShrink:0}}>{st.jm}</span>
-                {cijSt>0 && <span style={{fontSize:11,color:"#C00000",width:60,textAlign:"right",flexShrink:0}}>{cijSt.toFixed(2)}</span>}
-                <button onClick={()=>ukloniStavku(idx)}
-                  style={{padding:"4px 8px",borderRadius:6,border:"1px solid #FFCCCC",background:"#FFF0F0",color:"#C00000",cursor:"pointer",flexShrink:0}}>✕</button>
-              </div>);
+              return(
+                <div key={i} style={{display:"flex",gap:6,alignItems:"center",background:"#FAFAF5",padding:"8px",borderRadius:8,border:"1px solid #E8DECA"}}>
+                  <select value={st.siroId} onChange={e=>izmijeniStavku(i,"siroId",e.target.value)} style={{...S.input,flex:2,fontSize:12}}>
+                    <option value="">— Sirovina —</option>
+                    {(data.sirovine||[]).map(s=><option key={s.id} value={s.id}>{s.naziv} ({s.jm})</option>)}
+                  </select>
+                  <input type="number" min="0" step="0.001" placeholder="Kol." value={st.kolicina}
+                    onChange={e=>izmijeniStavku(i,"kolicina",e.target.value)}
+                    style={{...S.input,width:80,textAlign:"right"}}/>
+                  <span style={{fontSize:11,color:"#7A6545",width:24}}>{st.jm}</span>
+                  {cijSt>0&&<span style={{fontSize:11,color:"#C00000",width:55,textAlign:"right"}}>{cijSt.toFixed(2)}</span>}
+                  <button onClick={()=>ukloniStavku(i)} style={{padding:"4px 8px",borderRadius:6,border:"1px solid #FFCCCC",background:"#FFF0F0",color:"#C00000",cursor:"pointer"}}>✕</button>
+                </div>
+              );
             })}
           </div>
-
-          <button onClick={dodajStavku}
-            style={{width:"100%",padding:"8px",borderRadius:8,border:"2px dashed #C8860A",background:"#FFF8DC",color:"#C8860A",fontWeight:700,cursor:"pointer",marginBottom:14}}>
+          <button onClick={dodajStavku} style={{width:"100%",padding:"8px",borderRadius:8,border:"2px dashed #C8860A",background:"#FFF8DC",color:"#C8860A",fontWeight:700,cursor:"pointer",marginBottom:14}}>
             ➕ Dodaj sirovinu
           </button>
-
-          {/* Kalkulator troška */}
           <div style={{background:"#F5F0E8",borderRadius:10,padding:"10px 14px",marginBottom:14}}>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
-              <span style={{color:"#7A6545"}}>Trošak sirovina/kom:</span>
+              <span style={{color:"#7A6545"}}>Trošak/kom:</span>
               <span style={{fontWeight:800,color:"#C00000"}}>{trosakEditora.toFixed(2)} RSD</span>
             </div>
-            {selProd && data.cijene?.[selProd.id]?.maloprodaja>0 && (
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginTop:4}}>
-                <span style={{color:"#7A6545"}}>Prodajna cijena:</span>
-                <span style={{fontWeight:700}}>{data.cijene[selProd.id].maloprodaja} RSD</span>
-              </div>
-            )}
-            {selProd && data.cijene?.[selProd.id]?.maloprodaja>0 && trosakEditora>0 && (
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginTop:4}}>
-                <span style={{color:"#7A6545"}}>Marža:</span>
-                <span style={{fontWeight:800,color:
-                  ((data.cijene[selProd.id].maloprodaja-trosakEditora)/data.cijene[selProd.id].maloprodaja*100)>=30?"#107C41":
-                  ((data.cijene[selProd.id].maloprodaja-trosakEditora)/data.cijene[selProd.id].maloprodaja*100)>=0?"#C8860A":"#C00000"}}>
-                  {Math.round((data.cijene[selProd.id].maloprodaja-trosakEditora)/data.cijene[selProd.id].maloprodaja*100)}%
-                </span>
-              </div>
-            )}
           </div>
-
           <div style={{display:"flex",gap:10}}>
-            <Btn icon="✅" label="Sačuvaj normativ" onClick={sacuvaj} color="#107C41" full/>
+            <Btn icon="✅" label="Sačuvaj" onClick={sacuvaj} color="#107C41" full/>
             <Btn icon="✕" label="Otkaži" onClick={()=>setShowForm(false)} color="#7A6545" full/>
           </div>
         </Modal>
