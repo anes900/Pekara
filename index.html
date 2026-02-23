@@ -268,7 +268,7 @@ const SEED = {
   stanjeLokala: genStanje(),
   dostave:[],evidencija:[],dnevnaProizvodnja:[],kretanja:[],popisi:[],
   dobavljaci:[],narudzbine:[],troskoviMesecni:[],activityLog:[],
-  zaklucakSmjene:[],otpremnice:[],cijene:{},kategorije:[],normativi:[],
+  zaklucakSmjene:[],otpremnice:[],cijene:{},historijatCijena:[],kategorije:[],normativi:[],
   nextId:{sirovine:16,dostave:1,evidencija:1,dnevnaPro:1,kretanja:1,popisi:1,dobavljaci:1,narudzbine:1,zaklucak:1,otpremnica:1},
 };
 
@@ -1331,7 +1331,27 @@ function CijeneModal({data,persist}) {
     setCijene(c => ({...c, [prodId]: {...(c[prodId]||{}), tepsija:{...(c[prodId]?.tepsija||{}), [field]: val}}}));
   };
 
-  const save = () => { persist({...data, cijene}); setShow(false); };
+  const save = () => {
+    // Bilježi promjene cijena u historijat
+    const sviP = getSviP(data);
+    const novHist = [...(data.historijatCijena||[])];
+    Object.keys(cijene).forEach(function(id) {
+      const stara = data.cijene?.[id]?.maloprodaja||0;
+      const nova  = cijene[id]?.maloprodaja||0;
+      if(stara !== nova && nova > 0) {
+        const prod = sviP.find(function(p){return p.id===id||p.id===+id;});
+        novHist.unshift({
+          datum: today(),
+          prodId: id,
+          naziv: prod?prod.naziv:id,
+          staraMaloprodaja: stara,
+          novaMaloprodaja: nova,
+        });
+      }
+    });
+    persist({...data, cijene, historijatCijena: novHist.slice(0,200)});
+    setShow(false);
+  };
 
   const kat = getKat(data);
   const sviP = getSviP(data);
@@ -1499,6 +1519,27 @@ function CijeneModal({data,persist}) {
         ✅ {brSaCenama} od {sviP.length} proizvoda ima unesenu cijenu
       </div>
       <div style={{display:"flex",gap:10}}>
+        
+        {/* Historijat promjena cijena */}
+        {(data.historijatCijena||[]).length>0&&(
+          <div style={{marginTop:16,borderTop:"2px solid #E8DECA",paddingTop:14}}>
+            <div style={{fontWeight:700,fontSize:13,color:"#1C1A17",marginBottom:8}}>📋 Historijat promjena cijena</div>
+            <div style={{maxHeight:200,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
+              {(data.historijatCijena||[]).slice(0,50).map((h,i)=>{
+                const rast = h.novaMaloprodaja > h.staraMaloprodaja;
+                const pad  = h.novaMaloprodaja < h.staraMaloprodaja;
+                return(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",background:i%2===0?"white":"#FAFAF5",borderRadius:8,border:"1px solid #F0EBE0",fontSize:12}}>
+                  <span style={{color:"#9A8A75",flexShrink:0,width:82}}>{h.datum}</span>
+                  <span style={{flex:1,fontWeight:600}}>{h.naziv}</span>
+                  <span style={{color:"#7A6545",flexShrink:0}}>{h.staraMaloprodaja||0} RSD</span>
+                  <span style={{fontSize:14}}>{rast?"📈":pad?"📉":"➡️"}</span>
+                  <span style={{fontWeight:800,color:rast?"#107C41":pad?"#C00000":"#7A6545",flexShrink:0}}>{h.novaMaloprodaja} RSD</span>
+                </div>);
+              })}
+            </div>
+          </div>
+        )}
         <Btn icon="💾" label="Sačuvaj Cjenovnik" onClick={save} color="#1C1A17" full/>
         <Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/>
       </div>
@@ -2232,11 +2273,16 @@ function Analitika({data}) {
   const [tab,    setTab]    = useState("prodaja");
   const [period, setPeriod] = useState("month"); // month | 3month | 6month | year | all
   const [selGod, setSelGod] = useState(new Date().getFullYear());
+  const [datumOd, setDatumOd] = useState("");
+  const [datumDo, setDatumDo] = useState("");
 
   // ── Helpers ──────────────────────────────────────────────────────
   const months = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 
   const filterByPeriod = (arr, dateField) => {
+    if(period==="custom" && datumOd && datumDo) {
+      return arr.filter(x => x[dateField] >= datumOd && x[dateField] <= datumDo);
+    }
     const now = new Date();
     const cutoff = new Date();
     if(period==="month")       cutoff.setDate(now.getDate()-30);
@@ -2368,14 +2414,22 @@ function Analitika({data}) {
           {k:"year",   l:"Godina"},
           {k:"all",    l:"Sve"},
         ].map(p=>(
-          <button key={p.k} onClick={()=>setPeriod(p.k)}
-            style={{padding:"6px 14px",borderRadius:20,border:`1.5px solid ${period===p.k?"#1C1A17":"#E8DECA"}`,
-              background:period===p.k?"#1C1A17":"white",color:period===p.k?"white":"#5A4A35",
-              fontSize:12,fontWeight:period===p.k?700:400,cursor:"pointer"}}>
+          <button key={p.k} onClick={()=>{setPeriod(p.k);setDatumOd("");setDatumDo("");}}
+            style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid "+(period===p.k&&period!=="custom"?"#1C1A17":"#E8DECA"),
+              background:period===p.k&&period!=="custom"?"#1C1A17":"white",color:period===p.k&&period!=="custom"?"white":"#5A4A35",
+              fontSize:12,fontWeight:period===p.k&&period!=="custom"?700:400,cursor:"pointer"}}>
             {p.l}
           </button>
         ))}
-        <span style={{fontSize:11,color:"#9A8A75",marginLeft:8}}>— {periodLabel}</span>
+        <span style={{fontSize:11,color:"#7A6545",marginLeft:8}}>Od:</span>
+        <input type="date" value={datumOd} onChange={e=>{setDatumOd(e.target.value);if(e.target.value)setPeriod("custom");}}
+          style={{padding:"4px 8px",border:"1.5px solid "+(period==="custom"?"#C8860A":"#E8DECA"),borderRadius:8,fontSize:12,background:period==="custom"?"#FFF8DC":"white",cursor:"pointer"}}/>
+        <span style={{fontSize:11,color:"#7A6545"}}>Do:</span>
+        <input type="date" value={datumDo} onChange={e=>{setDatumDo(e.target.value);if(e.target.value)setPeriod("custom");}}
+          style={{padding:"4px 8px",border:"1.5px solid "+(period==="custom"?"#C8860A":"#E8DECA"),borderRadius:8,fontSize:12,background:period==="custom"?"#FFF8DC":"white",cursor:"pointer"}}/>
+        {period==="custom"&&<button onClick={()=>{setPeriod("month");setDatumOd("");setDatumDo("");}}
+          style={{padding:"4px 10px",borderRadius:20,border:"1px solid #FFCCCC",background:"#FFF0F0",color:"#C00000",fontSize:11,cursor:"pointer"}}>✕ Resetuj</button>}
+        <span style={{fontSize:11,color:"#9A8A75",marginLeft:4}}>— {period==="custom"&&datumOd&&datumDo?datumOd+" → "+datumDo:periodLabel}</span>
       </div>
 
       {/* Tabs */}
