@@ -145,7 +145,32 @@ try {
 
 </head>
 <body>
-<div id="root">
+<div id="root"></div>
+<div id="error-box" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#1C1A17;color:#FF6B6B;font-family:monospace;font-size:13px;padding:20px;overflow:auto;z-index:9999">
+  <div style="color:#E8A020;font-size:18px;margin-bottom:12px">⚠️ JavaScript Greška</div>
+  <pre id="error-msg"></pre>
+</div>
+<script>
+  window.onerror = function(msg, src, line, col, err) {
+    var box = document.getElementById('error-box');
+    var pre = document.getElementById('error-msg');
+    if(box && pre) {
+      box.style.display = 'block';
+      pre.textContent = 'Greška: ' + msg + '\nFajl: ' + src + '\nLinija: ' + line + ', Kolona: ' + col + (err ? '\nStack: ' + err.stack : '');
+    }
+    return false;
+  };
+  // Also catch unhandled promise rejections
+  window.onunhandledrejection = function(e) {
+    var box = document.getElementById('error-box');
+    var pre = document.getElementById('error-msg');
+    if(box && pre) {
+      box.style.display = 'block';
+      pre.textContent = 'Promise greška: ' + (e.reason ? (e.reason.message || e.reason) : 'nepoznato');
+    }
+  };
+</script>
+<div id="root-inner">
   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#FAF6EE">
     <div style="font-size:64px;animation:spin 1.5s linear infinite">🥖</div>
     <p style="font-family:Georgia,serif;font-size:20px;color:#C8860A;margin-top:16px">Učitavanje...</p>
@@ -293,7 +318,7 @@ function App() {
       setData(SEED);
       setKor(DEFAULT_KORISNICI);
       setLoad(false);
-    }, 15000);
+    }, 4000);
 
     (async () => {
       try {
@@ -724,7 +749,7 @@ function Dostava({data,persist,perms,session,addLog}) {
       kretanja:[...kretanjaNew,...(data.kretanja||[])],
       dostave:[{id:data.nextId.dostave,lokacija:selLok,lokNaziv:lok.naziv,datum:today(),vreme:nowStr(),stavke:arr,korisnik:session.ime},...(data.dostave||[])],
       nextId:{...data.nextId,dostave:data.nextId.dostave+1,kretanja:(data.nextId.kretanja||1)+kretanjaNew.length}
-    },`Dostava u ${lok.naziv}: ${arr.reduce((s,x)=>s+x.kolicina,0)} kom${sirosOdbijene?` · ${sirosOdbijene} kretanja sirovina`:""}`));
+    },"Dostava u "+lok.naziv+": "+arr.reduce((s,x)=>s+x.kolicina,0)+" kom"+(sirosOdbijene?" · "+sirosOdbijene+" kretanja sirovina":"")));
     setShow(false);
   };
   return (
@@ -1979,7 +2004,7 @@ function Otpremnice({data,persist,perms,session,addLog}) {
     <tbody>${rows}</tbody>
     <tfoot><tr style="background:#f9f7f2;font-weight:700"><td style="padding:8px 10px" colspan="3">UKUPNO</td><td style="padding:8px 10px;text-align:right;font-size:15px;color:#C8860A">${o.ukupno>0?o.ukupno.toLocaleString()+" RSD":"—"}</td></tr></tfoot>
     </table>
-    ${o.napomena?`<div style="margin-top:14px;background:#f9f7f2;padding:10px 14px;border-radius:8px;font-size:13px"><b>Napomena:</b> ${o.napomena}</div>`:""}
+    ${o.napomena?"<div style=\"margin-top:14px;background:#f9f7f2;padding:10px 14px;border-radius:8px;font-size:13px\"><b>Napomena:</b> "+o.napomena+"</div>":""}
     <div style="margin-top:16px;font-size:11px;color:#999">Primio: ${o.korisnik} · ${o.vreme}</div>
     <div class="no-print" style="margin-top:20px;text-align:center">
       <button onclick="window.print()" style="background:#1C1A17;color:white;border:none;padding:12px 32px;border-radius:10px;font-size:15px;cursor:pointer">🖨️ Štampaj / PDF</button>
@@ -4015,7 +4040,7 @@ const S={
   btn2:{padding:"4px 8px",background:"#FAF6EE",border:"1px solid #E0D5BE",borderRadius:6,cursor:"pointer",fontSize:13,marginRight:3},
 };
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+ReactDOM.createRoot(document.getElementById("root-inner")).render(<App/>);
 </script>
 </body>
 </html>
