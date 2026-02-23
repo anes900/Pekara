@@ -268,7 +268,7 @@ const SEED = {
   stanjeLokala: genStanje(),
   dostave:[],evidencija:[],dnevnaProizvodnja:[],kretanja:[],popisi:[],
   dobavljaci:[],narudzbine:[],troskoviMesecni:[],activityLog:[],
-  zaklucakSmjene:[],otpremnice:[],cijene:{},historijatCijena:[],kategorije:[],normativi:[],
+  zaklucakSmjene:[],otpremnice:[],cijene:{},historijatCijena:[],kategorije:[],normativi:[],pocetniPopis:false,
   nextId:{sirovine:16,dostave:1,evidencija:1,dnevnaPro:1,kretanja:1,popisi:1,dobavljaci:1,narudzbine:1,zaklucak:1,otpremnica:1},
 };
 
@@ -955,6 +955,8 @@ function Popis({data,persist,session,myLokal,addLog}) {
 
 // ── SIROVINE ──────────────────────────────────────────────────────
 function Sirovine({data,persist,perms,session,addLog}) {
+  const [showPocetni, setShowPocetni] = useState(false);
+  const [pocetneKol, setPocetneKol] = useState({});
   const [showAdd,setAdd]=useState(false); const [showMov,setMov]=useState(false); const [editId,setEId]=useState(null); const [filter,setFil]=useState("");
   const [form,setF]=useState({sifra:"",naziv:"",kat:"",jm:"kg",kolicina:"",cena:"",min:"",max:""});
   const [kForm,setK]=useState({siroId:"",vrsta:"ULAZ",kolicina:"",napomena:""});
@@ -962,11 +964,33 @@ function Sirovine({data,persist,perms,session,addLog}) {
   const saveK=()=>{const s=(data.sirovine||[]).find(x=>x.id===+kForm.siroId);if(!s)return;const d=kForm.vrsta==="ULAZ"?+kForm.kolicina:-Math.abs(+kForm.kolicina);if(s.kolicina+d<0){alert("Nedovoljno!");return;}const k={id:data.nextId.kretanja,siroId:s.id,naziv:s.naziv,vrsta:kForm.vrsta,kolicina:+kForm.kolicina,cena:s.cena,vrednost:+kForm.kolicina*s.cena,datum:today(),vreme:nowStr(),korisnik:session.ime,napomena:kForm.napomena};persist(addLog({...data,sirovine:(data.sirovine||[]).map(x=>x.id===s.id?{...x,kolicina:x.kolicina+d}:x),kretanja:[k,...(data.kretanja||[])],nextId:{...data.nextId,kretanja:data.nextId.kretanja+1}},`${kForm.vrsta}: ${s.naziv}`));setMov(false);setK({siroId:"",vrsta:"ULAZ",kolicina:"",napomena:""});};
   const siro=(data.sirovine||[]).filter(s=>s.naziv.toLowerCase().includes(filter.toLowerCase())||s.sifra.toLowerCase().includes(filter.toLowerCase()));
   const grupe={};siro.forEach(s=>{if(!grupe[s.kat])grupe[s.kat]=[];grupe[s.kat].push(s);});
+  const savePocetniPopis = () => {
+    const unesene = Object.entries(pocetneKol).filter(([,v])=>v!=="");
+    if(!unesene.length){ alert("Unesite barem jednu količinu!"); return; }
+    const novoStanje = (data.sirovine||[]).map(function(s) {
+      const v = pocetneKol[s.id];
+      return v!=="" && v!==undefined ? {...s, kolicina:+v} : s;
+    });
+    const kretanja = [...(data.kretanja||[])];
+    let nextKr = data.nextId.kretanja||1;
+    unesene.forEach(function([id,kol]) {
+      const sir = (data.sirovine||[]).find(function(s){return s.id===+id;});
+      if(sir && +kol>0) {
+        kretanja.push({id:nextKr++, siroId:+id, naziv:sir.naziv, vrsta:"ULAZ",
+          kolicina:+kol, cena:sir.cena||0, datum:today(), napomena:"Početni popis"});
+      }
+    });
+    persist(addLog({...data, sirovine:novoStanje, kretanja, pocetniPopis:true,
+      nextId:{...data.nextId, kretanja:nextKr}}, "✅ Početni popis sirovina unesen"));
+    setShowPocetni(false);
+    setPocetneKol({});
+  };
+
   return (
     <div style={{display:"flex",flexDirection:"column",gap:18}}>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
         <input value={filter} onChange={e=>setFil(e.target.value)} placeholder="🔍 Pretraga..." style={{...S.input,flex:1,minWidth:180,borderRadius:25}}/>
-        {perms.canEdit&&<><Btn icon="📥" label="Ulaz / Izlaz" onClick={()=>setMov(true)} color="#107C41"/><Btn icon="➕" label="Nova Sirovina" onClick={()=>{setAdd(true);setEId(null);setF({sifra:"",naziv:"",kat:"",jm:"kg",kolicina:"",cena:"",min:"",max:"",tip:"okvirno"});}} color="#C8860A"/></>}
+        {perms.canEdit&&<><Btn icon="📥" label="Ulaz / Izlaz" onClick={()=>setMov(true)} color="#107C41"/>{!data.pocetniPopis&&<Btn icon="🧾" label="Početni popis" onClick={()=>{setPocetneKol({});setShowPocetni(true);}} color="#1565C0"/>}{data.pocetniPopis&&<span style={{background:"#E8F5E9",color:"#107C41",fontSize:11,fontWeight:700,padding:"5px 12px",borderRadius:20}}>✅ Početni popis unesen</span>}</><Btn icon="➕" label="Nova Sirovina" onClick={()=>{setAdd(true);setEId(null);setF({sifra:"",naziv:"",kat:"",jm:"kg",kolicina:"",cena:"",min:"",max:"",tip:"okvirno"});}} color="#C8860A"/></>}
       </div>
       {Object.entries(grupe).map(([kat,items])=>(
         <Card key={kat} title={kat}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{background:"#C8860A"}}>{["Šifra","Naziv","Tip","Jm","Kol.","Cena","Vrednost","Min","Status",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
@@ -1285,6 +1309,40 @@ function ZaklucakSmjene({data,persist,session,myLokal,addLog}) {
         </div>
         <div style={{display:"flex",gap:10}}><Btn icon="🏁" label="Zaključi Smjenu" onClick={save} color="#1C1A17" full/><Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/></div>
       </Modal>}
+
+      {showPocetni&&(
+        <Modal title="🧾 Početni popis sirovina" onClose={()=>setShowPocetni(false)}>
+          <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#1565C0",marginBottom:14}}>
+            ℹ️ Unesite <b>trenutne količine</b> sirovina u magacinu. Ovo se radi <b>samo jednom</b> pri puštanju u rad.
+            Prazna polja se preskačaju.
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:400,overflowY:"auto",marginBottom:14}}>
+            {(data.sirovine||[]).map(s=>(
+              <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"#FAFAF5",borderRadius:8,border:"1px solid #E8DECA"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:13}}>{s.naziv}</div>
+                  <div style={{fontSize:11,color:"#7A6545"}}>{s.kat} · {s.jm}</div>
+                </div>
+                <input
+                  type="number" min="0" step="0.01"
+                  placeholder="0"
+                  value={pocetneKol[s.id]||""}
+                  onChange={e=>setPocetneKol(prev=>({...prev,[s.id]:e.target.value}))}
+                  style={{...S.input,width:100,textAlign:"right",fontWeight:700}}
+                />
+                <span style={{fontSize:11,color:"#7A6545",width:28}}>{s.jm}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"#F5F0E8",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#5A4A35",marginBottom:14}}>
+            Uneseno: <b>{Object.values(pocetneKol).filter(v=>v!=="").length}</b> od {(data.sirovine||[]).length} sirovina
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <Btn icon="✅" label="Sačuvaj početno stanje" onClick={savePocetniPopis} color="#1565C0" full/>
+            <Btn icon="✕" label="Otkaži" onClick={()=>setShowPocetni(false)} color="#7A6545" full/>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
