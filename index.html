@@ -464,7 +464,7 @@ function App() {
           {validTab==="proizvodi"  && <UpravljanjeProizvodima data={data} persist={persist} />}
           {validTab==="analitika"  && <Analitika   data={data} />}
           {validTab==="aktivnost"  && <Aktivnost   data={data} session={session} />}
-          {session.uloga==="direktor" && <AdminPanel data={data} persist={persist} addLog={addLog} session={session} korisnici={korisnici}/>}
+          {session.uloga==="direktor" && <AdminPanel data={data} persist={persist} addLog={addLog} session={session}/>}
         </div>
       </div>
     </div>
@@ -2429,7 +2429,6 @@ function ProfitTab({data, filterByPeriod, period}) {
 }
 
 
-
 function Analitika({data}) {
   const [tab,    setTab]    = useState("prodaja");
   const [period, setPeriod] = useState("month"); // month | 3month | 6month | year | all
@@ -3247,7 +3246,7 @@ function UpravljanjeProizvodima({data,persist}) {
 
 
 // ── ADMIN PANEL (Direktor — upravljanje podacima) ────────────────
-function AdminPanel({data, persist, addLog, session, korisnici}) {
+function AdminPanel({data, persist, addLog, session}) {
   const [show, setShow] = useState(false);
   const [tab,  setTab]  = useState("dostave");
   const [potvrda, setPotvrda] = useState(null);
@@ -3319,7 +3318,6 @@ function AdminPanel({data, persist, addLog, session, korisnici}) {
               {k:"dostave",   l:"🚚 Dostave",        n:dostave.length},
               {k:"zaklucaci", l:"🏁 Zaključci",      n:zaklucaci.length},
               {k:"stanje",    l:"📦 Reset Stanja",   n:null},
-              {k:"backup",    l:"💾 Backup",          n:null},
             ].map(t=>(
               <button key={t.k} onClick={()=>{setTab(t.k);setPotvrda(null);}}
                 style={{padding:"7px 14px",borderRadius:8,border:"none",background:tab===t.k?"#1C1A17":"transparent",
@@ -3455,93 +3453,6 @@ function AdminPanel({data, persist, addLog, session, korisnici}) {
                     )}
                   </div>);
                 })}
-              </div>
-            )}
-
-            {/* BACKUP / RESTORE */}
-            {tab==="backup"&&(
-              <div style={{display:"flex",flexDirection:"column",gap:14}}>
-
-                {/* Info */}
-                <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,padding:"12px 16px",fontSize:13,color:"#1565C0"}}>
-                  💾 <b>Backup</b> preuzima sve podatke kao JSON fajl na vaš telefon/računar.<br/>
-                  <b>Restore</b> učitava taj fajl i vraća sve podatke. <span style={{color:"#C00000",fontWeight:700}}>Trenutni podaci će biti zamijenjeni!</span>
-                </div>
-
-                {/* Export */}
-                <div style={{background:"white",borderRadius:12,border:"1px solid #E8DECA",padding:"16px"}}>
-                  <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>📤 Preuzmi Backup</div>
-                  <div style={{fontSize:12,color:"#7A6545",marginBottom:12}}>
-                    Kreira JSON fajl sa <b>svim podacima</b> — dostave, zaključci, sirovine, proizvodi, cijene, normativi...
-                  </div>
-                  <button onClick={()=>{
-                    const backup = {
-                      verzija: "1.0",
-                      datum: new Date().toISOString(),
-                      aplikacija: "Mama Mantia",
-                      data: data,
-                      korisnici: korisnici
-                    };
-                    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:"application/json"});
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "MamaMantia_backup_" + today() + ".json";
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }} style={{background:"#1565C0",color:"white",border:"none",borderRadius:10,padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,width:"100%",justifyContent:"center"}}>
-                    📥 Preuzmi Backup ({today()})
-                  </button>
-                </div>
-
-                {/* Auto-backup info */}
-                <div style={{background:"#F0FFF4",border:"1px solid #BBF7D0",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#107C41"}}>
-                  ✅ <b>Firebase automatski čuva sve promjene u realnom vremenu.</b><br/>
-                  Preporučujemo da jednom sedmično preuzmete ručni backup za dodatnu sigurnost.
-                </div>
-
-                {/* Import */}
-                <div style={{background:"white",borderRadius:12,border:"2px solid #FFCCCC",padding:"16px"}}>
-                  <div style={{fontWeight:700,fontSize:14,marginBottom:6,color:"#C00000"}}>⚠️ Restore iz Backupa</div>
-                  <div style={{fontSize:12,color:"#7A6545",marginBottom:12}}>
-                    Učitajte prethodno preuzeti backup fajl. <b style={{color:"#C00000"}}>Svi trenutni podaci će biti izgubljeni!</b>
-                  </div>
-                  <input type="file" accept=".json" id="restore-file"
-                    style={{display:"none"}}
-                    onChange={(e)=>{
-                      const file = e.target.files[0];
-                      if(!file) return;
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        try {
-                          const backup = JSON.parse(ev.target.result);
-                          if(!backup.data || !backup.aplikacija) {
-                            alert("❌ Nevažeći backup fajl!");
-                            return;
-                          }
-                          if(!window.confirm("⚠️ SIGURNO?
-
-Ovo će zamijeniti SVE trenutne podatke sa backupom od:
-" + (backup.datum||"nepoznato") + "
-
-Ova akcija se NE MOŽE PONIŠTITI!")) return;
-                          persist(backup.data);
-                          alert("✅ Restore uspješan! Stranica će se osvježiti.");
-                          setTimeout(()=>window.location.reload(), 1000);
-                        } catch(err) {
-                          alert("❌ Greška pri učitavanju: " + err.message);
-                        }
-                        e.target.value = "";
-                      };
-                      reader.readAsText(file);
-                    }}
-                  />
-                  <button onClick={()=>document.getElementById("restore-file").click()}
-                    style={{background:"#FFF0F0",color:"#C00000",border:"2px solid #FFCCCC",borderRadius:10,padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,width:"100%",justifyContent:"center"}}>
-                    📂 Odaberi Backup Fajl...
-                  </button>
-                </div>
-
               </div>
             )}
           </div>
