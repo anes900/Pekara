@@ -332,6 +332,31 @@ function App() {
     window.addEventListener('resize', onResize);
     return ()=>window.removeEventListener('resize', onResize);
   }, []);
+
+  React.useEffect(()=>{
+    let x0=null;
+    const onStart = e=>{ x0=e.touches?e.touches[0].clientX:null; };
+    const onEnd   = e=>{
+      if(x0===null) return;
+      const dx = (e.changedTouches?e.changedTouches[0].clientX:x0) - x0;
+      if(Math.abs(dx)<60) return;
+      if(document.querySelector('[style*="z-index: 1000"]')) return;
+      setTab(prev=>{
+        const allKeys=TABS.map(t=>t.key);
+        const ci=allKeys.indexOf(prev);
+        if(dx<0 && ci<allKeys.length-1) return allKeys[ci+1];
+        if(dx>0 && ci>0) return allKeys[ci-1];
+        return prev;
+      });
+      x0=null;
+    };
+    window.addEventListener('touchstart', onStart, {passive:true});
+    window.addEventListener('touchend', onEnd, {passive:true});
+    return ()=>{
+      window.removeEventListener('touchstart', onStart);
+      window.removeEventListener('touchend', onEnd);
+    };
+  }, []);
   React.useEffect(()=>{
     try{localStorage.setItem('mm_dark', darkMode?'1':'0');}catch(e){}
   }, [darkMode]);
@@ -1737,6 +1762,7 @@ function Otpremnice({data,persist,perms,session,addLog}) {
   const [show,setShow]=useState(false);
   const [form,setF]=useState({dobId:"",brOtpremnice:"",napomena:"",datum:today()});
   const [stavke,setSt]=useState([{siroId:"",kolicina:"",cena:""}]);
+  const [otrSearch,setOtrSearch]=useState("");
 
   const addStavka=()=>setSt(s=>[...s,{siroId:"",kolicina:"",cena:""}]);
   const removeStavka=i=>setSt(s=>s.filter((_,idx)=>idx!==i));
@@ -1821,8 +1847,9 @@ function Otpremnice({data,persist,perms,session,addLog}) {
       )}
       {perms.canEdit&&<div><Btn icon="📄" label="Nova Otpremnica (Prijem Robe)" onClick={()=>setShow(true)} color="#1C1A17"/></div>}
       <Card title="📋 Arhiva Otpremnica">
+        <input placeholder="🔍 Pretraži otpremnice..." value={otrSearch} onChange={e=>setOtrSearch(e.target.value)} style={{...S.input,marginBottom:10}}/>
         {(data.otpremnice||[]).length===0?<p style={{color:"#7A6545",fontSize:13,textAlign:"center",padding:20}}>Nema otpremnica. Unesite prvu otpremnicu klikom iznad.</p>:
-        (data.otpremnice||[]).slice(0,20).map((o,i)=>(
+        (data.otpremnice||[]).filter(o=>!otrSearch||(o.brOtpremnice||"").toString().includes(otrSearch)||(o.dobavljacNaziv||"").toLowerCase().includes(otrSearch.toLowerCase())||(o.datum||"").includes(otrSearch)).slice(0,30).map((o,i)=>(
           <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:i%2===0?"white":"#FAF6EE",borderRadius:10,border:"1px solid #E8DECA",marginBottom:6}}>
             <div style={{fontSize:24}}>📄</div>
             <div style={{flex:1}}>
@@ -1956,6 +1983,7 @@ function UvozSoljica({data, persist, session, myLokal, addLog}) {
   const [error,   setError]       = useState("");
   const [loading, setLoading]     = useState(false);
   const [uvezena, setUvezena]     = useState(null);
+  const [selDate, setSelDate]     = useState(today());
 
   const mamaProizvodi = getSviP(data);
 
@@ -2039,7 +2067,7 @@ function UvozSoljica({data, persist, session, myLokal, addLog}) {
       id: data.nextId.zaklucak,
       lokacija: selLok,
       lokNaziv: lok.naziv,
-      datum: today(),
+      datum: selDate,
       vreme: nowStr(),
       smjena: "soljica",
       stavke,
@@ -2083,6 +2111,11 @@ function UvozSoljica({data, persist, session, myLokal, addLog}) {
               {li.icon} {li.naziv}
             </button>
           );})}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
+          <label style={{fontSize:12,color:"#7A6545",fontWeight:600,margin:0}}>Datum uvoza:</label>
+          <input type="date" value={selDate} max={today()} onChange={e=>setSelDate(e.target.value)} style={{...S.input,fontWeight:700,color:"#C8860A"}} />
+          {selDate!==today()&&<span style={{background:"#FFF8DC",border:"1px solid #E8A020",borderRadius:8,padding:"4px 10px",fontSize:12,color:"#C8860A",fontWeight:700}}>Prošli datum</span>}
         </div>
       </Card>
 
@@ -2201,7 +2234,7 @@ function UvozSoljica({data, persist, session, myLokal, addLog}) {
     return (
       <div style={{display:"flex",flexDirection:"column",gap:18}}>
         <div style={{background:"#FFF8DC",border:"1px solid #E8D5A0",borderRadius:12,padding:"14px 18px",fontSize:13,lineHeight:1.8}}>
-          <b>📋 Pregled uvoza za {lok.icon} {lok.naziv} — {today()}</b><br/>
+          <b>📋 Pregled uvoza za {lok.icon} {lok.naziv} — {selDate}</b><br/>
           Provjerite podatke pa kliknite <b>"Potvrdi uvoz"</b>. Stanje robe u lokalu će biti ažurirano.
         </div>
 
@@ -2209,7 +2242,7 @@ function UvozSoljica({data, persist, session, myLokal, addLog}) {
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
           {[
             {l:"Lokacija",  v:`${lok.icon} ${lok.naziv}`, c:"#1C1A17", bg:"#FAF6EE"},
-            {l:"Datum",     v:today(),                     c:"#C8860A", bg:"#FFF8DC"},
+            {l:"Datum",     v:selDate,                     c:"#C8860A", bg:"#FFF8DC"},
             {l:"Prodano",   v:`${ukupnoKom} kom`,          c:"#107C41", bg:"#E8F5E9"},
             {l:"Promet",    v:`${ukupnoSol.toLocaleString()} RSD`, c:"#1D4ED8", bg:"#EFF6FF"},
             {l:"Mapirano",  v:`${mapirano.length}/${sveSolStavke.length}`, c:neMapirano>0?"#C00000":"#107C41", bg:neMapirano>0?"#FFF0F0":"#E8F5E9"},
@@ -2610,10 +2643,21 @@ function PeriodIzvjestaj({data}) {
         </div>
 
         {/* Print dugme */}
-        <button onClick={printIzvjestaj} style={{background:"#1C1A17",color:"white",border:"none",borderRadius:10,
-          padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,width:"100%",justifyContent:"center"}}>
-          🖨️ Generiši i Štampaj / Sačuvaj PDF
-        </button>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={printIzvjestaj} style={{background:"#1C1A17",color:"white",border:"none",borderRadius:10,
+            padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,justifyContent:"center"}}>
+            🖨️ Generiši i Štampaj / Sačuvaj PDF
+          </button>
+          <button onClick={()=>{
+            const lokNaziv = lokFilter==="sve"?"Svi lokali":LOKALI[lokFilter]?.naziv||lokFilter;
+            const subject = "Izvjestaj "+lokNaziv+" "+od+" do "+do_;
+            const body = "Izvjestaj: "+lokNaziv+"\nPeriod: "+od+" - "+do_+"\n\nPrihod: "+ukPromet.toLocaleString()+" RSD\nProdano: "+ukProdano+" kom\nRashodi: "+(ukTroskovi+ukNabavka).toLocaleString()+" RSD\nProfit: "+ukProfit.toLocaleString()+" RSD\n\nTop artikli:\n"+prodaja.slice(0,10).map(p=>p.naziv+": "+p.prodano+" kom").join("\n")+"\n\nGenerisano: "+danas;
+            window.location.href="mailto:?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+          }} style={{background:"#1565C0",color:"white",border:"none",borderRadius:10,
+            padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+            ✉️ Email
+          </button>
+        </div>
       </Card>
 
       {/* Tabela prodaje */}
@@ -2985,8 +3029,8 @@ function Analitika({data}) {
                       <td style={S.td}>PROSJEK/MJ.</td>
                       <td style={{...S.td,textAlign:"right",color:"#C8860A"}}>{fmtN(prosjecniMj)} RSD</td>
                       <td style={{...S.td,textAlign:"center",color:"#107C41"}}>{mj_prodaja.length>0?fmtN(Math.round(ukupnoProdano/mj_prodaja.length)):0}</td>
-                      <td style={S.td}/>
-                      <td style={S.td}/>
+                      <td style={S.td}></td>
+                      <td style={S.td}></td>
                     </tr>
                   </tbody>
                 </table></div>
