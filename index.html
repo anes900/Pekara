@@ -2461,100 +2461,73 @@ function ProfitTab({data, filterByPeriod, period}) {
 }
 
 
-// ── SVG CHART KOMPONENTE ──────────────────────────────────────────
+// ── DIV CHART KOMPONENTE ─────────────────────────────────────────
 
-function LineChart({data, xKey, yKey, color="#C8860A", height=160, label=""}) {
-  if(!data||data.length<2) return <div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:"#9A8A75",fontSize:12}}>Nedovoljno podataka za grafikon</div>;
-  const vals = data.map(d=>d[yKey]||0);
-  const maxV = Math.max(...vals, 1);
-  const minV = Math.min(...vals, 0);
-  const range = maxV - minV || 1;
-  const W = 600; const H = height - 30;
-  const pts = data.map((d,i) => {
-    const x = (i / (data.length-1)) * W;
-    const y = H - ((d[yKey]||0) - minV) / range * H;
-    return [x, y];
-  });
-  const pathD = pts.map((p,i) => (i===0?"M":"L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
-  const areaD = pathD + " L"+W+" "+H+" L0 "+H+" Z";
+function BarChart({data, xKey, bars, height=160, title}) {
+  if(!data||!data.length) return null;
+  const allVals = data.flatMap(function(d){return bars.map(function(b){return d[b.key]||0;});});
+  const maxV = Math.max.apply(null, allVals.concat([1]));
   return (
-    <div style={{overflowX:"auto"}}>
-      <svg viewBox={"0 0 "+W+" "+height} style={{width:"100%",minWidth:280,height:"auto",display:"block"}}>
-        {/* Grid linije */}
-        {[0,25,50,75,100].map(pct=>{
-          const y = H - (pct/100)*H;
-          return <line key={pct} x1="0" y1={y} x2={W} y2={y} stroke="#E8DECA" strokeWidth="1" strokeDasharray="4"/>;
-        })}
-        {/* Area fill */}
-        <defs>
-          <linearGradient id={"grad_"+yKey} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.25"/>
-            <stop offset="100%" stopColor={color} stopOpacity="0.02"/>
-          </linearGradient>
-        </defs>
-        <path d={areaD} fill={"url(#grad_"+yKey+")"}/>
-        {/* Linija */}
-        <path d={pathD} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        {/* Tačke i labele */}
-        {pts.map((p,i)=>{
-          const d = data[i];
-          const xLabel = d[xKey]||"";
-          const val = d[yKey]||0;
-          return (
-            <g key={i}>
-              <circle cx={p[0]} cy={p[1]} r="4" fill={color} stroke="white" strokeWidth="1.5"/>
-              {/* X labela */}
-              <text x={p[0]} y={H+18} textAnchor="middle" fontSize="9" fill="#7A6545">{xLabel.length>7?xLabel.slice(-5):xLabel}</text>
-              {/* Vrijednost na vrhu */}
-              {(data.length<=12) && <text x={p[0]} y={Math.max(p[1]-8,10)} textAnchor="middle" fontSize="8" fill={color} fontWeight="700">{val>1000?Math.round(val/1000)+"k":val}</text>}
-            </g>
+    <div>
+      {bars.length>1&&(
+        <div style={{display:"flex",gap:12,fontSize:11,color:"#7A6545",marginBottom:8,flexWrap:"wrap"}}>
+          {bars.map(function(b){return(
+            <span key={b.key}>
+              <span style={{display:"inline-block",width:10,height:10,background:b.color,borderRadius:2,marginRight:4}}/>
+              {b.label}
+            </span>
+          );})}
+        </div>
+      )}
+      <div style={{display:"flex",alignItems:"flex-end",gap:4,height:height,overflowX:"auto",paddingBottom:20}}>
+        {data.map(function(d,i){
+          return(
+            <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:"0 0 auto",minWidth:bars.length>1?bars.length*18+8:28}}>
+              <div style={{display:"flex",alignItems:"flex-end",gap:2,height:height-20}}>
+                {bars.map(function(b){
+                  const val = d[b.key]||0;
+                  const h = Math.max(Math.round((val/maxV)*(height-24)),val>0?3:0);
+                  return(
+                    <div key={b.key} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+                      {val>0&&data.length<=10&&<div style={{fontSize:8,color:b.color,fontWeight:700,whiteSpace:"nowrap"}}>{val>999?Math.round(val/1000)+"k":val}</div>}
+                      <div style={{width:bars.length>1?16:Math.min(32,Math.floor(300/data.length)),height:h,background:b.color,borderRadius:"3px 3px 0 0"}}/>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{fontSize:9,color:"#7A6545",textAlign:"center",maxWidth:50,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {(d[xKey]||"").toString().slice(0,8)}
+              </div>
+            </div>
           );
         })}
-      </svg>
+      </div>
     </div>
   );
 }
 
-function BarChart({data, xKey, bars, height=180}) {
-  if(!data||!data.length) return <div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:"#9A8A75",fontSize:12}}>Nema podataka</div>;
-  const allVals = data.flatMap(d=>bars.map(b=>d[b.key]||0));
-  const maxV = Math.max(...allVals, 1);
-  const W = 600; const H = height - 36;
-  const barW = Math.min(40, (W / data.length) / (bars.length+0.5));
-  const groupW = W / data.length;
+function LineChart({data, xKey, yKey, color}) {
+  if(!data||data.length<2) return null;
+  const maxV = Math.max.apply(null, data.map(function(d){return d[yKey]||0;}).concat([1]));
+  const H = 130;
   return (
     <div style={{overflowX:"auto"}}>
-      <svg viewBox={"0 0 "+W+" "+height} style={{width:"100%",minWidth:280,height:"auto",display:"block"}}>
-        {[0,25,50,75,100].map(pct=>{
-          const y = H - (pct/100)*H;
-          return <line key={pct} x1="0" y1={y} x2={W} y2={y} stroke="#E8DECA" strokeWidth="1" strokeDasharray="4"/>;
-        })}
-        {data.map((d,i)=>{
-          const cx = groupW*i + groupW/2;
-          const xLabel = d[xKey]||"";
-          return (
-            <g key={i}>
-              {bars.map((b,bi)=>{
-                const val = d[b.key]||0;
-                const bh = Math.max((val/maxV)*H, val>0?3:0);
-                const bx = cx - (bars.length*barW)/2 + bi*barW;
-                return (
-                  <g key={b.key}>
-                    <rect x={bx} y={H-bh} width={barW-2} height={bh} fill={b.color} rx="3"/>
-                    {data.length<=8 && val>0 && <text x={bx+barW/2-1} y={H-bh-4} textAnchor="middle" fontSize="8" fill={b.color} fontWeight="700">{val>999?Math.round(val/1000)+"k":val}</text>}
-                  </g>
-                );
-              })}
-              <text x={cx} y={H+14} textAnchor="middle" fontSize="9" fill="#7A6545">{xLabel.length>6?xLabel.slice(-4):xLabel}</text>
-            </g>
+      <div style={{display:"flex",alignItems:"flex-end",gap:0,height:H+20,minWidth:data.length*40}}>
+        {data.map(function(d,i){
+          const val = d[yKey]||0;
+          const h = Math.max(Math.round((val/maxV)*H), val>0?3:0);
+          const isMax = val===maxV;
+          return(
+            <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",flex:1,minWidth:36}}>
+              {val>0&&<div style={{fontSize:8,color:color||"#C8860A",fontWeight:700,marginBottom:2}}>{val>999?Math.round(val/1000)+"k":val}</div>}
+              <div style={{width:"70%",height:h,background:isMax?"linear-gradient(180deg,#E8A020,#C8860A)":"linear-gradient(180deg,"+( color||"#C8860A")+","+( color||"#C8860A")+"99)",borderRadius:"4px 4px 0 0",transition:"height .3s"}}/>
+              <div style={{fontSize:9,color:"#7A6545",marginTop:4,textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",maxWidth:40}}>
+                {(d[xKey]||"").toString().slice(0,6)}
+              </div>
+            </div>
           );
         })}
-      </svg>
-      {bars.length>1 && (
-        <div style={{display:"flex",gap:12,fontSize:11,color:"#7A6545",marginTop:4,flexWrap:"wrap"}}>
-          {bars.map(b=><span key={b.key}><span style={{display:"inline-block",width:10,height:10,background:b.color,borderRadius:2,marginRight:4}}/>{b.label}</span>)}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
