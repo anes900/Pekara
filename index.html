@@ -2264,10 +2264,10 @@ function ProfitTab({data, filterByPeriod, period}) {
 
       {/* KPI kartice */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
-        <KPI icon="💰" label="Ukupni prihod" value={fmt(ukPrihod)} color="#107C41" bg="#F0FFF4"/>
-        <KPI icon="🌾" label="Trošak sirovina" value={fmt(ukSirovine)} color="#C00000" bg="#FFF0F0"/>
-        <KPI icon="📋" label="Fiksni troškovi" value={fmt(ukTroskovi)} color="#C8860A" bg="#FFF8DC"/>
-        <KPI icon={profit>=0?"📈":"📉"} label="Profit / Gubitak" value={fmt(profit)} color={profit>=0?"#107C41":"#C00000"} bg={profit>=0?"#F0FFF4":"#FFF0F0"}/>
+        <KPI icon="💰" label="Ukupni prihod" value={fmtN(ukPrihod)} color="#107C41" bg="#F0FFF4"/>
+        <KPI icon="🌾" label="Trošak sirovina" value={fmtN(ukSirovine)} color="#C00000" bg="#FFF0F0"/>
+        <KPI icon="📋" label="Fiksni troškovi" value={fmtN(ukTroskovi)} color="#C8860A" bg="#FFF8DC"/>
+        <KPI icon={profit>=0?"📈":"📉"} label="Profit / Gubitak" value={fmtN(profit)} color={profit>=0?"#107C41":"#C00000"} bg={profit>=0?"#F0FFF4":"#FFF0F0"}/>
         <KPI icon="%" label="Marža" value={margin+"%"} color={margin>=30?"#107C41":margin>=0?"#C8860A":"#C00000"}/>
       </div>
 
@@ -2286,7 +2286,7 @@ function ProfitTab({data, filterByPeriod, period}) {
                   <div style={{width:200,background:"#F5F0E8",borderRadius:20,height:10,overflow:"hidden"}}>
                     <div style={{width:(ukRashod>0?Math.round((r.iznos/ukRashod)*100):0)+"%",height:"100%",background:r.boja,borderRadius:20}}/>
                   </div>
-                  <div style={{fontWeight:700,color:r.boja,width:80,textAlign:"right"}}>{fmt(r.iznos)}</div>
+                  <div style={{fontWeight:700,color:r.boja,width:80,textAlign:"right"}}>{fmtN(r.iznos)}</div>
                 </div>
               ))}
             </div>
@@ -2302,7 +2302,7 @@ function ProfitTab({data, filterByPeriod, period}) {
             : topSirovine.map((s,i)=>(
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #F5F0E8",fontSize:13}}>
                 <span>{s.naziv}</span>
-                <span style={{fontWeight:700,color:"#C00000"}}>{fmt(s.iznos)}</span>
+                <span style={{fontWeight:700,color:"#C00000"}}>{fmtN(s.iznos)}</span>
               </div>
             ))
           }
@@ -2315,7 +2315,7 @@ function ProfitTab({data, filterByPeriod, period}) {
             : topTros.map((t,i)=>(
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #F5F0E8",fontSize:13}}>
                 <span>{t.naziv}</span>
-                <span style={{fontWeight:700,color:"#C8860A"}}>{fmt(t.iznos)}</span>
+                <span style={{fontWeight:700,color:"#C8860A"}}>{fmtN(t.iznos)}</span>
               </div>
             ))
           }
