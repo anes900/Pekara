@@ -3762,12 +3762,7 @@ function AdminPanel({data, persist, addLog, session, korisnici}) {
                         try {
                           const backup=JSON.parse(ev.target.result);
                           if(!backup.data||!backup.aplikacija){alert("❌ Nevažeći backup fajl!");return;}
-                          if(!window.confirm("⚠️ SIGURNO?
-
-Zamijeniće SVE podatke backupom od:
-"+(backup.datum||"nepoznato")+"
-
-Ova akcija se NE MOŽE PONIŠTITI!")) return;
+                          if(!window.confirm("⚠️ SIGURNO? Zamijeniće SVE podatke backupom od: "+(backup.datum||"nepoznato")+". Ova akcija se NE MOŽE PONIŠTITI!")) return;
                           persist(backup.data);
                           alert("✅ Restore uspješan!");
                           setTimeout(()=>window.location.reload(),1000);
