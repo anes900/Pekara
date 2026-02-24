@@ -435,6 +435,7 @@ function App() {
     {key:"normativi",  icon:"📐", label:"Normativi", roles:["direktor","nadzor"]},
     {key:"proizvodi",  icon:"🛒", label:"Upravljanje Proizvodima", roles:["direktor"]},
     {key:"analitika",  icon:"📈", label:"Analitika & Izvještaji", roles:["direktor","nadzor"]},
+    {key:"izvjestaj",  icon:"📄", label:"Periodični Izvještaj",  roles:["direktor","nadzor"]},
     {key:"aktivnost",  icon:"🕐", label:"Aktivnost",           roles:["direktor","magacioner","radnik","nadzor","prodavac1","prodavac2"]},
   ];
 
@@ -463,6 +464,7 @@ function App() {
           {validTab==="normativi"  && <Normativi data={data} persist={persist} session={session} addLog={addLog} />}
           {validTab==="proizvodi"  && <UpravljanjeProizvodima data={data} persist={persist} />}
           {validTab==="analitika"  && <Analitika   data={data} />}
+          {validTab==="izvjestaj" && <PeriodIzvjestaj data={data} />}
           {validTab==="aktivnost"  && <Aktivnost   data={data} session={session} />}
           {session.uloga==="direktor" && <AdminPanel data={data} persist={persist} addLog={addLog} session={session}/>}
         </div>
@@ -2429,6 +2431,265 @@ function ProfitTab({data, filterByPeriod, period}) {
 }
 
 
+// ── PERIODIČNI IZVJEŠTAJ ──────────────────────────────────────────
+function PeriodIzvjestaj({data}) {
+  const danas = today();
+  const preMjesec = danas.substring(0,8) + "01";
+  const [od, setOd] = useState(preMjesec);
+  const [do_, setDo] = useState(danas);
+  const [lokFilter, setLokFilter] = useState("sve");
+  const [tip, setTip] = useState("prodaja"); // prodaja | sirovine | finansije
+
+  const LOKALI_OPT = [
+    {k:"sve",   l:"Svi lokali"},
+    {k:"mama1", l:"Mama Mantia 1"},
+    {k:"mama2", l:"Mama Mantia 2"},
+  ];
+
+  // Filtrirani zaključci po periodu i lokalu
+  const zaklucaci = (data.zaklucakSmjene||[]).filter(z => {
+    if(!z.datum) return false;
+    if(z.datum < od || z.datum > do_) return false;
+    if(lokFilter !== "sve" && z.lokacija !== lokFilter) return false;
+    return true;
+  });
+
+  // Filtrirane dostave
+  const dostave = (data.dostave||[]).filter(d => {
+    if(!d.datum) return false;
+    if(d.datum < od || d.datum > do_) return false;
+    if(lokFilter !== "sve" && d.lokacija !== lokFilter) return false;
+    return true;
+  });
+
+  // Filtrirani troškovi
+  const troskovi = (data.troskovi||[]).filter(t => {
+    if(!t.datum) return false;
+    return t.datum >= od && t.datum <= do_;
+  });
+
+  // Filtrirane sirovine - kretanja
+  const kretanja = (data.kretanja||[]).filter(k => {
+    if(!k.datum) return false;
+    return k.datum >= od && k.datum <= do_;
+  });
+
+  // ── Kalkulacije prodaje ──────────────────────────────────────────
+  const calcProdaja = () => {
+    const map = {};
+    zaklucaci.forEach(z => {
+      (z.stavke||[]).forEach(s => {
+        if(!s.prodId || !s.prodano) return;
+        if(!map[s.prodId]) map[s.prodId] = {naziv:s.naziv, kat:s.kat||"", prodano:0, promet:0};
+        map[s.prodId].prodano += s.prodano||0;
+        map[s.prodId].promet  += s.promet||0;
+      });
+    });
+    return Object.values(map).sort((a,b)=>b.prodano-a.prodano);
+  };
+
+  const prodaja = calcProdaja();
+  const ukPromet   = zaklucaci.reduce((s,z)=>s+(z.blagajna||0), 0);
+  const ukProdano  = zaklucaci.reduce((s,z)=>s+(z.stavke||[]).reduce((ss,st)=>ss+(st.prodano||0),0), 0);
+  const ukTroskovi = troskovi.reduce((s,t)=>s+(t.iznos||0), 0);
+  const ukNabavka  = kretanja.filter(k=>k.vrsta==="ULAZ").reduce((s,k)=>s+(k.kolicina||0)*(k.cena||0), 0);
+  const ukProfit   = ukPromet - ukTroskovi - ukNabavka;
+  const brSmjena   = zaklucaci.length;
+
+  // ── Print funkcija ───────────────────────────────────────────────
+  const printIzvjestaj = () => {
+    const lokNaziv = lokFilter==="sve" ? "Svi lokali" : LOKALI[lokFilter]?.naziv || lokFilter;
+    const prodRows = prodaja.map(p =>
+      "<tr><td style='padding:5px 8px;border-bottom:1px solid #eee'>" + p.naziv + "</td>" +
+      "<td style='padding:5px 8px;border-bottom:1px solid #eee;text-align:center'>" + p.prodano + "</td>" +
+      "<td style='padding:5px 8px;border-bottom:1px solid #eee;text-align:right'>" + (p.promet||0).toLocaleString() + " RSD</td></tr>"
+    ).join("");
+
+    const win = window.open("","_blank","width=900,height=800");
+    win.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'/><title>Izvjestaj</title>" +
+      "<style>body{font-family:'Segoe UI',sans-serif;margin:0;padding:24px;color:#1C1A17}" +
+      "h1{font-family:Georgia,serif;margin:0 0 4px}" +
+      ".logo{font-family:Georgia,serif;font-size:26px;font-weight:700;font-style:italic}" +
+      ".logo span{color:#C8860A}" +
+      ".header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #E8A020;padding-bottom:14px;margin-bottom:20px}" +
+      ".kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}" +
+      ".kpi-box{background:#f9f7f2;border:1px solid #e8d5a0;border-radius:10px;padding:12px;text-align:center}" +
+      ".kpi-val{font-size:18px;font-weight:800;font-family:Georgia,serif}" +
+      ".kpi-lbl{font-size:10px;color:#7A6545;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}" +
+      "table{width:100%;border-collapse:collapse;font-size:13px}" +
+      "thead tr{background:#1C1A17;color:white}" +
+      "th{padding:8px;text-align:left;font-size:11px}" +
+      ".section{margin-bottom:24px}" +
+      "h3{font-family:Georgia,serif;font-size:14px;color:#1C1A17;border-bottom:1px solid #E8D5A0;padding-bottom:6px;margin-bottom:12px}" +
+      ".footer{margin-top:24px;font-size:10px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:12px}" +
+      "@media print{.no-print{display:none}}" +
+      "</style></head><body>" +
+      "<div class='header'>" +
+        "<div><div class='logo'>Mama <span>🥟</span> Mantia</div><div style='font-size:12px;color:#7A6545;margin-top:4px'>Novi Pazar</div></div>" +
+        "<div style='text-align:right'>" +
+          "<div style='font-size:16px;font-weight:700'>📄 Periodični Izvještaj</div>" +
+          "<div style='font-size:13px;color:#7A6545'>" + lokNaziv + "</div>" +
+          "<div style='font-size:12px;color:#999'>Period: " + od + " → " + do_ + "</div>" +
+          "<div style='font-size:11px;color:#999'>Generisan: " + danas + "</div>" +
+        "</div>" +
+      "</div>" +
+      "<div class='kpi'>" +
+        "<div class='kpi-box'><div class='kpi-val' style='color:#C8860A'>" + ukPromet.toLocaleString() + "</div><div class='kpi-lbl'>Prihod RSD</div></div>" +
+        "<div class='kpi-box'><div class='kpi-val' style='color:#1C1A17'>" + ukProdano + "</div><div class='kpi-lbl'>Prodano kom</div></div>" +
+        "<div class='kpi-box'><div class='kpi-val' style='color:#C00000'>" + (ukTroskovi+ukNabavka).toLocaleString() + "</div><div class='kpi-lbl'>Rashodi RSD</div></div>" +
+        "<div class='kpi-box'><div class='kpi-val' style='color:" + (ukProfit>=0?"#107C41":"#C00000") + "'>" + ukProfit.toLocaleString() + "</div><div class='kpi-lbl'>Profit RSD</div></div>" +
+      "</div>" +
+      "<div class='section'><h3>📦 Prodaja po artiklima</h3>" +
+        "<table><thead><tr><th>Artikal</th><th style='text-align:center'>Prodano</th><th style='text-align:right'>Promet</th></tr></thead>" +
+        "<tbody>" + prodRows + "</tbody></table></div>" +
+      "<div class='section'><h3>💰 Troškovi</h3>" +
+        "<table><thead><tr><th>Opis</th><th>Kategorija</th><th style='text-align:right'>Iznos</th></tr></thead><tbody>" +
+        troskovi.map(t => "<tr><td style='padding:5px 8px;border-bottom:1px solid #eee'>" + (t.opis||"-") + "</td><td style='padding:5px 8px;border-bottom:1px solid #eee;color:#7A6545'>" + (t.kat||"-") + "</td><td style='padding:5px 8px;border-bottom:1px solid #eee;text-align:right'>" + (t.iznos||0).toLocaleString() + " RSD</td></tr>").join("") +
+        "</tbody></table></div>" +
+      "<div class='footer'>Mama Mantia · Sistem Upravljanja · Izvještaj generisan " + danas + "</div>" +
+      "<div class='no-print' style='margin-top:20px;text-align:center;display:flex;gap:12px;justify-content:center'>" +
+        "<button onclick='window.print()' style='background:#1C1A17;color:white;border:none;padding:12px 32px;border-radius:10px;font-size:14px;cursor:pointer'>🖨️ Štampaj / Sačuvaj PDF</button>" +
+        "<button onclick='window.close()' style='background:#eee;color:#333;border:none;padding:12px 24px;border-radius:10px;font-size:14px;cursor:pointer'>Zatvori</button>" +
+      "</div></body></html>");
+    win.document.close();
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <Card title="📄 Periodični Izvještaj">
+        {/* Filteri */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+          <div>
+            <label style={S.label}>Od datuma</label>
+            <input type="date" value={od} onChange={e=>setOd(e.target.value)} style={S.input}/>
+          </div>
+          <div>
+            <label style={S.label}>Do datuma</label>
+            <input type="date" value={do_} onChange={e=>setDo(e.target.value)} style={S.input}/>
+          </div>
+          <div>
+            <label style={S.label}>Lokal</label>
+            <select value={lokFilter} onChange={e=>setLokFilter(e.target.value)} style={S.input}>
+              {LOKALI_OPT.map(o=><option key={o.k} value={o.k}>{o.l}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Brzi odabir perioda */}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+          {[
+            {l:"Danas",       od:danas,                                     do:danas},
+            {l:"Ova sedmica", od:(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().slice(0,10);})(), do:danas},
+            {l:"Ovaj mjesec", od:danas.substring(0,8)+"01",                 do:danas},
+            {l:"Prošli mj.",  od:(()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,10);})(), do:(()=>{const d=new Date();d.setDate(0);return d.toISOString().slice(0,10);})()},
+            {l:"Ova godina",  od:danas.substring(0,4)+"-01-01",             do:danas},
+          ].map(p=>(
+            <button key={p.l} onClick={()=>{setOd(p.od);setDo(p.do);}}
+              style={{padding:"6px 12px",borderRadius:20,border:"1px solid #E0D5BE",background: od===p.od&&do_===p.do?"#1C1A17":"#FAF6EE",
+                color:od===p.od&&do_===p.do?"white":"#5A4A35",fontSize:12,cursor:"pointer",fontWeight:600}}>
+              {p.l}
+            </button>
+          ))}
+        </div>
+
+        {/* KPI kartice */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10,marginBottom:16}}>
+          {[
+            {icon:"💰", val:ukPromet.toLocaleString()+" RSD",  lbl:"Ukupni prihod",   c:"#C8860A"},
+            {icon:"📦", val:ukProdano+" kom",                   lbl:"Prodano ukupno",  c:"#1C1A17"},
+            {icon:"🏁", val:brSmjena+" smjena",                 lbl:"Smjena u periodu",c:"#1565C0"},
+            {icon:"💸", val:(ukTroskovi+ukNabavka).toLocaleString()+" RSD", lbl:"Ukupni rashodi", c:"#C00000"},
+            {icon:"📈", val:ukProfit.toLocaleString()+" RSD",   lbl:"Procijenjeni profit", c:ukProfit>=0?"#107C41":"#C00000"},
+          ].map(k=>(
+            <div key={k.lbl} style={{background:"#FAF6EE",borderRadius:10,padding:"12px 14px",border:"1px solid #E8DECA",textAlign:"center"}}>
+              <div style={{fontSize:20,marginBottom:4}}>{k.icon}</div>
+              <div style={{fontSize:14,fontWeight:800,color:k.c,fontFamily:"Georgia,serif"}}>{k.val}</div>
+              <div style={{fontSize:10,color:"#7A6545",marginTop:2,textTransform:"uppercase",letterSpacing:.4}}>{k.lbl}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Print dugme */}
+        <button onClick={printIzvjestaj} style={{background:"#1C1A17",color:"white",border:"none",borderRadius:10,
+          padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,width:"100%",justifyContent:"center"}}>
+          🖨️ Generiši i Štampaj / Sačuvaj PDF
+        </button>
+      </Card>
+
+      {/* Tabela prodaje */}
+      {prodaja.length>0&&(
+        <Card title={"📦 Prodaja po artiklima — "+od+" → "+do_}>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",minWidth:400,borderCollapse:"collapse",fontSize:13}}>
+              <thead><tr style={{background:"#1C1A17"}}>
+                <th style={S.th}>Artikal</th>
+                <th style={{...S.th,textAlign:"center"}}>Prodano</th>
+                <th style={{...S.th,textAlign:"right"}}>Promet</th>
+                <th style={{...S.th,textAlign:"right"}}>% od ukupnog</th>
+              </tr></thead>
+              <tbody>
+                {prodaja.map((p,i)=>(
+                  <tr key={p.naziv} style={{background:i%2===0?"white":"#FAF6EE"}}>
+                    <td style={S.td}>{p.naziv}</td>
+                    <td style={{...S.td,textAlign:"center",fontWeight:700}}>{p.prodano}</td>
+                    <td style={{...S.td,textAlign:"right"}}>{(p.promet||0).toLocaleString()} RSD</td>
+                    <td style={{...S.td,textAlign:"right",color:"#C8860A",fontWeight:700}}>
+                      {ukProdano>0?Math.round((p.prodano/ukProdano)*100)+"%":"—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot><tr style={{background:"#F5F0E8",fontWeight:700,borderTop:"2px solid #1C1A17"}}>
+                <td style={S.td}>UKUPNO</td>
+                <td style={{...S.td,textAlign:"center",fontSize:15,color:"#107C41"}}>{ukProdano}</td>
+                <td style={{...S.td,textAlign:"right",fontSize:14,color:"#C8860A"}}>{ukPromet.toLocaleString()} RSD</td>
+                <td style={S.td}>100%</td>
+              </tr></tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Tabela troškova */}
+      {troskovi.length>0&&(
+        <Card title={"💰 Troškovi — "+od+" → "+do_}>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",minWidth:380,borderCollapse:"collapse",fontSize:13}}>
+              <thead><tr style={{background:"#1C1A17"}}>
+                <th style={S.th}>Opis</th>
+                <th style={S.th}>Kategorija</th>
+                <th style={{...S.th,textAlign:"right"}}>Iznos</th>
+              </tr></thead>
+              <tbody>
+                {troskovi.sort((a,b)=>(b.iznos||0)-(a.iznos||0)).map((t,i)=>(
+                  <tr key={t.id||i} style={{background:i%2===0?"white":"#FAF6EE"}}>
+                    <td style={S.td}>{t.opis||"—"}</td>
+                    <td style={{...S.td,color:"#7A6545"}}>{t.kat||"—"}</td>
+                    <td style={{...S.td,textAlign:"right",fontWeight:700,color:"#C00000"}}>{(t.iznos||0).toLocaleString()} RSD</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot><tr style={{background:"#FFF0F0",fontWeight:700,borderTop:"2px solid #C00000"}}>
+                <td style={S.td} colSpan={2}>UKUPNO TROŠKOVI</td>
+                <td style={{...S.td,textAlign:"right",color:"#C00000",fontSize:14}}>{ukTroskovi.toLocaleString()} RSD</td>
+              </tr></tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {zaklucaci.length===0&&(
+        <Card>
+          <div style={{textAlign:"center",padding:40,color:"#9A8A75",fontSize:14}}>
+            📭 Nema podataka za odabrani period ({od} → {do_})
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+
 function Analitika({data}) {
   const [tab,    setTab]    = useState("prodaja");
   const [period, setPeriod] = useState("month"); // month | 3month | 6month | year | all
@@ -2559,7 +2820,7 @@ function Analitika({data}) {
   const ukupnoProdano = prodaja.reduce((s,x)=>s+x.prodano,0);
   const prosjecniMj   = mj_prodaja.length>0 ? Math.round(ukupnoPromet/mj_prodaja.length) : 0;
 
-  const barMax = (arr, field) => Math.max(...arr.map(x=>x[field]||0), 1);
+  const barMax = (arr, field) => { const vals = arr.map(x=>x[field]||0); vals.push(1); return Math.max.apply(null, vals); };
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -2782,7 +3043,7 @@ function Analitika({data}) {
                 <Card title="📅 Nabavka vs. Potrošnja sirovina po miesecu">
                   <div style={{display:"flex",alignItems:"flex-end",gap:6,height:140,marginBottom:12,overflowX:"auto",paddingBottom:8}}>
                     {mj_sir.map(m=>{
-                      const mx = Math.max(...mj_sir.map(x=>Math.max(x.nabavka,x.potrosnja)),1);
+                      const _sirVals = mj_sir.map(x=>Math.max(x.nabavka,x.potrosnja)); _sirVals.push(1); const mx = Math.max.apply(null, _sirVals);
                       const hN = Math.round((m.nabavka/mx)*120);
                       const hP = Math.round((m.potrosnja/mx)*120);
                       const [yr,mo] = m.mjesec.split("-");
