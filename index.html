@@ -1445,39 +1445,6 @@ function ZaklucakSmjene({data,persist,session,myLokal,addLog}) {
         <div style={{display:"flex",gap:10}}><Btn icon="🏁" label="Zaključi Smjenu" onClick={save} color="#1C1A17" full/><Btn icon="✕" label="Otkaži" onClick={()=>setShow(false)} color="#7A6545" full/></div>
       </Modal>}
 
-      {showPocetni&&(
-        <Modal title="🧾 Početni popis sirovina" onClose={()=>setShowPocetni(false)}>
-          <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#1565C0",marginBottom:14}}>
-            ℹ️ Unesite <b>trenutne količine</b> sirovina u magacinu. Ovo se radi <b>samo jednom</b> pri puštanju u rad.
-            Prazna polja se preskačaju.
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:400,overflowY:"auto",marginBottom:14}}>
-            {(data.sirovine||[]).map(s=>(
-              <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"#FAFAF5",borderRadius:8,border:"1px solid #E8DECA"}}>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13}}>{s.naziv}</div>
-                  <div style={{fontSize:11,color:"#7A6545"}}>{s.kat} · {s.jm}</div>
-                </div>
-                <input
-                  type="number" min="0" step="0.01"
-                  placeholder="0"
-                  value={pocetneKol[s.id]||""}
-                  onChange={e=>setPocetneKol(prev=>({...prev,[s.id]:e.target.value}))}
-                  style={{...S.input,width:100,textAlign:"right",fontWeight:700}}
-                />
-                <span style={{fontSize:11,color:"#7A6545",width:28}}>{s.jm}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{background:"#F5F0E8",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#5A4A35",marginBottom:14}}>
-            Uneseno: <b>{Object.values(pocetneKol).filter(v=>v!=="").length}</b> od {(data.sirovine||[]).length} sirovina
-          </div>
-          <div style={{display:"flex",gap:10}}>
-            <Btn icon="✅" label="Sačuvaj početno stanje" onClick={savePocetniPopis} color="#1565C0" full/>
-            <Btn icon="✕" label="Otkaži" onClick={()=>setShowPocetni(false)} color="#7A6545" full/>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
@@ -3174,9 +3141,9 @@ function UpravljanjeProizvodima({data,persist}) {
       </div>
 
       {/* Action buttons */}
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         <Btn icon="➕" label="Nova Kategorija" onClick={()=>{setEditKat(null);setKF({id:"",naziv:"",icon:"🍽️",boja:"#C8860A",direktna:false});setShowKat(true);}} color="#1C1A17"/>
-        <button onClick={resetToDefault} style={{...S.btn2,fontSize:12,padding:"9px 14px",color:"#C00000",background:"#FFF0F0",border:"1px solid #FFCCCC"}}>↺ Vrati na originalne proizvode</button>
+        <button onClick={resetToDefault} style={{...S.btn2,fontSize:11,padding:"8px 12px",color:"#C00000",background:"#FFF0F0",border:"1px solid #FFCCCC"}}>↺ Originalni</button>
       </div>
 
       {/* Categories list */}
@@ -3190,18 +3157,18 @@ function UpravljanjeProizvodima({data,persist}) {
               <span style={{color:"rgba(255,255,255,.5)",fontSize:11,marginLeft:10}}>{kat.proizvodi.length} proizvoda</span>
               {kat.direktna&&<Tag bg="#E8F5E9" color="#107C41" style={{marginLeft:8}}>📥 Direktna dostava</Tag>}
             </div>
-            <div style={{display:"flex",gap:6}}>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
               <button onClick={()=>moveKat(kat.id,-1)} disabled={ki===0} style={{...S.btn2,background:"rgba(255,255,255,.1)",color:"white",border:"none",padding:"5px 8px",opacity:ki===0?.3:1}}>↑</button>
               <button onClick={()=>moveKat(kat.id,+1)} disabled={ki===kategorije.length-1} style={{...S.btn2,background:"rgba(255,255,255,.1)",color:"white",border:"none",padding:"5px 8px",opacity:ki===kategorije.length-1?.3:1}}>↓</button>
-              <button onClick={()=>{setEditKat(kat);setKF({id:kat.id,naziv:kat.naziv,icon:kat.icon,boja:kat.boja,direktna:kat.direktna});setShowKat(true);}} style={{...S.btn2,background:"rgba(255,255,255,.15)",color:"white",border:"none",padding:"5px 10px",fontSize:13}}>✏️</button>
-              <button onClick={()=>deleteKat(kat.id)} style={{...S.btn2,background:"rgba(220,0,0,.2)",color:"#ffaaaa",border:"none",padding:"5px 10px",fontSize:13}}>🗑️</button>
-              <button onClick={()=>{setEditProd({katId:kat.id,prod:null});setPF({id:"",naziv:""});setShowProd(true);}} style={{background:"#E8A020",color:"white",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><span>➕</span> Dodaj Proizvod</button>
+              <button onClick={()=>{setEditKat(kat);setKF({id:kat.id,naziv:kat.naziv,icon:kat.icon,boja:kat.boja,direktna:kat.direktna});setShowKat(true);}} style={{...S.btn2,background:"rgba(255,255,255,.15)",color:"white",border:"none",padding:"5px 8px",fontSize:13}}>✏️</button>
+              <button onClick={()=>deleteKat(kat.id)} style={{...S.btn2,background:"rgba(220,0,0,.2)",color:"#ffaaaa",border:"none",padding:"5px 8px",fontSize:13}}>🗑️</button>
+              <button onClick={()=>{setEditProd({katId:kat.id,prod:null});setPF({id:"",naziv:""});setShowProd(true);}} style={{background:"#E8A020",color:"white",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}><span>➕</span> Dodaj</button>
             </div>
           </div>
           {/* Products list */}
           <div style={{padding:"10px 12px"}}>
             {kat.proizvodi.length===0&&<p style={{color:"#B0A090",fontSize:12,textAlign:"center",padding:"10px 0",fontStyle:"italic"}}>Nema proizvoda — kliknite "Dodaj Proizvod" iznad</p>}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:8}}>
               {kat.proizvodi.map((p,pi)=>(
                 <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"#FAFAF8",borderRadius:8,border:"1px solid #EEE2D0"}}>
                   <span style={{fontSize:14,color:kat.boja,flexShrink:0}}>•</span>
