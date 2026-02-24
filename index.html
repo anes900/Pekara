@@ -334,30 +334,6 @@ function App() {
   }, []);
 
   React.useEffect(()=>{
-    let x0=null;
-    const onStart = e=>{ x0=e.touches?e.touches[0].clientX:null; };
-    const onEnd   = e=>{
-      if(x0===null) return;
-      const dx = (e.changedTouches?e.changedTouches[0].clientX:x0) - x0;
-      if(Math.abs(dx)<60) return;
-      if(document.querySelector('[style*="z-index: 1000"]')) return;
-      setTab(prev=>{
-        const allKeys=TABS.map(t=>t.key);
-        const ci=allKeys.indexOf(prev);
-        if(dx<0 && ci<allKeys.length-1) return allKeys[ci+1];
-        if(dx>0 && ci>0) return allKeys[ci-1];
-        return prev;
-      });
-      x0=null;
-    };
-    window.addEventListener('touchstart', onStart, {passive:true});
-    window.addEventListener('touchend', onEnd, {passive:true});
-    return ()=>{
-      window.removeEventListener('touchstart', onStart);
-      window.removeEventListener('touchend', onEnd);
-    };
-  }, []);
-  React.useEffect(()=>{
     try{localStorage.setItem('mm_dark', darkMode?'1':'0');}catch(e){}
   }, [darkMode]);
 
