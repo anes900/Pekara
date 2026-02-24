@@ -97,7 +97,7 @@ input:focus,select:focus{outline:2px solid #E8A020;outline-offset:1px}
   background: #1a1917;
 }
 
-/* ── MOBILE bottom nav ── */
+/* ── MOBILE ── */
 .mm-bottom-nav {
   display: none;
   position: fixed;
@@ -106,6 +106,15 @@ input:focus,select:focus{outline:2px solid #E8A020;outline-offset:1px}
   background: #1C1A17;
   border-top: 2px solid #E8A020;
   box-shadow: 0 -4px 20px rgba(0,0,0,.5);
+}
+/* Tabele scrollabilne na mobilnom */
+@media (max-width: 768px) {
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tbl-wrap table { min-width: 480px; }
+  /* Grid 2-kol → 1-kol */
+  .mob-1col { grid-template-columns: 1fr !important; }
+  /* Sakrij manje bitne kolone */
+  .mob-hide { display: none !important; }
 }
 </style>
 
@@ -437,7 +446,7 @@ function App() {
       <BottomNav tabs={mojiTabovi} tab={validTab} setTab={setTab} isMobile={isMobile} />
       <Sidebar tabs={mojiTabovi} tab={validTab} setTab={setTab} session={session} perms={perms} fbSt={fbSt} onLogout={()=>setSess(null)} isMobile={isMobile} />
       <div style={{...S.main, filter: darkMode?"invert(1) hue-rotate(180deg)":"none"}}>
-        <TopBar tab={validTab} tabs={TABS} saveSt={saveSt} session={session} perms={perms} myLokal={myLokal} darkMode={darkMode} setDarkMode={setDarkMode} />
+        <TopBar tab={validTab} tabs={TABS} saveSt={saveSt} session={session} perms={perms} myLokal={myLokal} darkMode={darkMode} setDarkMode={setDarkMode} isMobile={isMobile} />
         <div style={{...S.content, paddingBottom:isMobile?"80px":"18px"}} className="mm-content">
           {validTab==="dashboard"  && <Dashboard   data={data} />}
           {validTab==="dnevnapro"  && <DnevnaProizvodnja data={data} persist={persist} session={session} addLog={addLog} />}
@@ -522,30 +531,84 @@ function LoginScreen({ korisnici, onLogin }) {
 // ── SIDEBAR ───────────────────────────────────────────────────────
 // ── MOBILE BOTTOM NAV ─────────────────────────────────────────────
 function BottomNav({tabs, tab, setTab, isMobile}) {
+  const [showAll, setShowAll] = React.useState(false);
   if(!isMobile) return null;
-  // Prikaži max 5 najbitnijih tabova
-  const vidljivi = tabs.slice(0, 5);
-  return (
-    <nav className="mm-bottom-nav" style={{
-      position:"fixed", bottom:0, left:0, right:0, zIndex:500,
-      background:"#1C1A17", borderTop:"2px solid #E8A020",
-      display:"flex", alignItems:"stretch",
-      boxShadow:"0 -4px 20px rgba(0,0,0,.4)"
+
+  // Prvih 4 najbitnija + "Više" dugme
+  const glavni = tabs.slice(0, 4);
+  const ostali = tabs.slice(4);
+  const activeInOstali = ostali.find(t=>t.key===tab);
+
+  const NavBtn = ({t, onClick}) => (
+    <button onClick={onClick||(() => setTab(t.key))} style={{
+      flex:1, padding:"8px 2px 10px", border:"none",
+      background:tab===t.key?"rgba(232,160,32,.18)":"transparent",
+      color:tab===t.key?"#E8A020":"rgba(255,255,255,.55)",
+      cursor:"pointer", display:"flex", flexDirection:"column",
+      alignItems:"center", gap:2,
+      borderTop: tab===t.key?"2px solid #E8A020":"2px solid transparent",
+      minWidth:0
     }}>
-      {vidljivi.map(t=>(
-        <button key={t.key} onClick={()=>setTab(t.key)} style={{
-          flex:1, padding:"8px 4px 10px", border:"none",
-          background:tab===t.key?"rgba(232,160,32,.15)":"transparent",
-          color:tab===t.key?"#E8A020":"rgba(255,255,255,.5)",
-          cursor:"pointer", display:"flex", flexDirection:"column",
-          alignItems:"center", gap:2,
-          borderTop: tab===t.key?"2px solid #E8A020":"2px solid transparent"
+      <span style={{fontSize:20}}>{t.icon}</span>
+      <span style={{fontSize:9,fontWeight:tab===t.key?700:400,lineHeight:1,textAlign:"center",maxWidth:52,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+        {t.label.split(" ")[0]}
+      </span>
+    </button>
+  );
+
+  return (
+    <>
+      {/* Drawer sa svim tabovima */}
+      {showAll && (
+        <div onClick={()=>setShowAll(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:998}}/>
+      )}
+      {showAll && (
+        <div style={{position:"fixed",bottom:64,left:0,right:0,zIndex:999,
+          background:"#1C1A17",borderTop:"2px solid #E8A020",borderRadius:"20px 20px 0 0",
+          padding:"16px 8px 8px",boxShadow:"0 -8px 30px rgba(0,0,0,.5)"}}>
+          <div style={{textAlign:"center",color:"rgba(255,255,255,.4)",fontSize:11,marginBottom:12,fontWeight:600,textTransform:"uppercase",letterSpacing:1}}>
+            Svi moduli
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4}}>
+            {tabs.map(t=>(
+              <button key={t.key} onClick={()=>{setTab(t.key);setShowAll(false);}} style={{
+                padding:"12px 6px",border:"none",borderRadius:10,
+                background:tab===t.key?"rgba(232,160,32,.2)":"rgba(255,255,255,.05)",
+                color:tab===t.key?"#E8A020":"rgba(255,255,255,.7)",
+                cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,
+                border:tab===t.key?"1px solid #E8A020":"1px solid transparent"
+              }}>
+                <span style={{fontSize:22}}>{t.icon}</span>
+                <span style={{fontSize:10,fontWeight:600,lineHeight:1.2,textAlign:"center"}}>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fiksni bottom nav */}
+      <nav style={{
+        display:"flex", position:"fixed", bottom:0, left:0, right:0, zIndex:999,
+        background:"#1C1A17", borderTop:"2px solid #E8A020",
+        boxShadow:"0 -4px 20px rgba(0,0,0,.5)",
+        paddingBottom:"env(safe-area-inset-bottom,0px)"
+      }}>
+        {glavni.map(t=><NavBtn key={t.key} t={t}/>)}
+        {/* Više dugme */}
+        <button onClick={()=>setShowAll(s=>!s)} style={{
+          flex:1, padding:"8px 2px 10px", border:"none",
+          background:activeInOstali||showAll?"rgba(232,160,32,.18)":"transparent",
+          color:activeInOstali||showAll?"#E8A020":"rgba(255,255,255,.55)",
+          cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+          borderTop: showAll?"2px solid #E8A020":"2px solid transparent"
         }}>
-          <span style={{fontSize:18}}>{t.icon}</span>
-          <span style={{fontSize:9,fontWeight:tab===t.key?700:400,lineHeight:1}}>{t.label.split(" ")[0]}</span>
+          <span style={{fontSize:20}}>{showAll?"✕":"☰"}</span>
+          <span style={{fontSize:9,fontWeight:600,lineHeight:1}}>
+            {activeInOstali ? activeInOstali.icon : "Više"}
+          </span>
         </button>
-      ))}
-    </nav>
+      </nav>
+    </>
   );
 }
 
@@ -584,21 +647,21 @@ function Sidebar({tabs,tab,setTab,session,perms,fbSt,onLogout,isMobile}) {
 }
 
 // ── TOPBAR ────────────────────────────────────────────────────────
-function TopBar({tab,tabs,saveSt,session,perms,myLokal,darkMode,setDarkMode}) {
+function TopBar({tab,tabs,saveSt,session,perms,myLokal,darkMode,setDarkMode,isMobile}) {
   const t=tabs.find(x=>x.key===tab); const lok=myLokal?LOKALI[myLokal]:null;
   return (
     <header style={S.topbar} className="mm-topbar">
-      <h1 style={{margin:0,fontSize:18,fontFamily:"Georgia,serif",color:"#1C1A17"}}>{t?.icon} {t?.label}</h1>
+      <h1 style={{margin:0,fontSize:isMobile?15:18,fontFamily:"Georgia,serif",color:"#1C1A17",flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t?.icon} {t?.label}</h1>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         {saveSt&&<span style={{fontSize:12,color:saveSt.includes("✅")?"#107C41":saveSt.includes("❌")?"#C00000":"#A07010",fontWeight:700}}>{saveSt}</span>}
         {lok&&<Tag bg={lok.bg} color={lok.boja}>{lok.icon} {lok.naziv}</Tag>}
-        <Tag bg="#FAF6EE" color="#C8860A">{perms.icon} {session.ime}</Tag>
+        {!isMobile&&<Tag bg="#FAF6EE" color="#C8860A">{perms.icon} {session.ime}</Tag>}
         <button onClick={()=>setDarkMode(d=>!d)}
           style={{background:darkMode?"#1C1A17":"#F0EBE0",border:"1.5px solid "+(darkMode?"#E8A020":"#C8A050"),
-            borderRadius:20,padding:"5px 13px",cursor:"pointer",
-            display:"flex",alignItems:"center",gap:5,
+            borderRadius:20,padding:isMobile?"6px 8px":"5px 13px",cursor:"pointer",
+            display:"flex",alignItems:"center",gap:4,
             color:darkMode?"#E8A020":"#5A4A35",fontWeight:700,fontSize:12}}>
-          {darkMode?"☀️ Svijetlo":"🌙 Tamno"}
+          {darkMode?"☀️":"🌙"}{!isMobile&&(darkMode?" Svijetlo":" Tamno")}
         </button>
         <div style={{width:8,height:8,borderRadius:"50%",background:"#4CAF50"}}/>
       </div>
@@ -2674,7 +2737,7 @@ function Analitika({data}) {
                   })}
                 </div>
                 {/* Table */}
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{width:"100%",minWidth:500,borderCollapse:"collapse",fontSize:12}}>
                   <thead><tr style={{background:"#1C1A17"}}>
                     {["Mjesec","Blagajna (RSD)","Prodano (kom)","Br. smjena","Prosj./smjeni"].map(h=><th key={h} style={S.th}>{h}</th>)}
                   </tr></thead>
@@ -2698,7 +2761,7 @@ function Analitika({data}) {
                       <td style={S.td}/>
                     </tr>
                   </tbody>
-                </table>
+                </table></div>
               </>
             }
           </Card>
@@ -2814,7 +2877,7 @@ function Analitika({data}) {
 
           {lokali.length>0&&(
             <Card title="📊 Usporedba lokala">
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{width:"100%",minWidth:500,borderCollapse:"collapse",fontSize:13}}>
                 <thead><tr style={{background:"#1C1A17"}}>
                   {["Lokal","Prodano","Promet","Prosj./smjeni","Tačnost blagajne"].map(h=><th key={h} style={S.th}>{h}</th>)}
                 </tr></thead>
@@ -2833,7 +2896,7 @@ function Analitika({data}) {
                     </tr>);
                   })}
                 </tbody>
-              </table>
+              </table></div>
             </Card>
           )}
         </div>
@@ -3434,7 +3497,18 @@ function AdminPanel({data, persist, addLog, session}) {
 
 // ── SHARED UI ─────────────────────────────────────────────────────
 function Card({title,children}){return <div style={{background:"white",borderRadius:14,padding:"18px 20px",boxShadow:"0 2px 12px rgba(74,44,10,.07)",border:"1px solid #E8DECA"}}>{title&&<h3 style={{margin:"0 0 14px",fontFamily:"Georgia,serif",fontSize:14,color:"#1C1A17",borderBottom:"2px solid #E8D5A0",paddingBottom:10}}>{title}</h3>}{children}</div>;}
-function Modal({title,children,onClose}){return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16,backdropFilter:"blur(3px)"}}><div style={{background:"white",borderRadius:16,width:"100%",maxWidth:580,maxHeight:"92vh",overflow:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.35)"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid #E8DECA",background:"#FAF6EE",borderRadius:"16px 16px 0 0"}}><h2 style={{margin:0,fontSize:16,fontFamily:"Georgia,serif",color:"#1C1A17"}}>{title}</h2><button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#7A6545"}}>✕</button></div><div style={{padding:"20px"}}>{children}</div></div></div>;}
+function Modal({title,children,onClose}){
+  const mob = typeof window!=="undefined" && window.innerWidth < 768;
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:1000,display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",padding:mob?0:16,backdropFilter:"blur(3px)"}}>
+    <div style={{background:"white",borderRadius:mob?"20px 20px 0 0":"16px",width:"100%",maxWidth:mob?"100%":580,maxHeight:mob?"92vh":"92vh",overflow:"auto",boxShadow:"0 -4px 40px rgba(0,0,0,.4)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid #E8DECA",background:"#FAF6EE",borderRadius:mob?"20px 20px 0 0":"16px 16px 0 0",position:"sticky",top:0,zIndex:1}}>
+        <h2 style={{margin:0,fontSize:15,fontFamily:"Georgia,serif",color:"#1C1A17"}}>{title}</h2>
+        <button onClick={onClose} style={{background:"#F0EBE0",border:"none",fontSize:16,cursor:"pointer",color:"#7A6545",borderRadius:"50%",width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+      </div>
+      <div style={{padding:mob?"16px":"20px"}}>{children}</div>
+    </div>
+  </div>;
+}
 function Btn({icon,label,onClick,color="#C8860A",full}){return <button onClick={onClick} style={{background:color,color:"white",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,width:full?"100%":"auto",justifyContent:full?"center":undefined}}><span>{icon}</span>{label}</button>;}
 function Tag({bg="#F5F5F5",color="#333",children}){return <span style={{background:bg,color,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block"}}>{children}</span>;}
 function Alert({children}){return <div style={{background:"#FFF3CD",border:"1px solid #FBBF24",borderRadius:12,padding:"12px 18px",display:"flex",alignItems:"center",gap:10,color:"#92400E",fontWeight:600,fontSize:13}}>{children}</div>;}
