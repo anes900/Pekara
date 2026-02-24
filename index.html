@@ -2476,10 +2476,10 @@ function LineChart({data, xKey, yKey, color="#C8860A", height=160, label=""}) {
     return [x, y];
   });
   const pathD = pts.map((p,i) => (i===0?"M":"L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
-  const areaD = pathD + ` L${W} ${H} L0 ${H} Z`;
+  const areaD = pathD + " L"+W+" "+H+" L0 "+H+" Z";
   return (
     <div style={{overflowX:"auto"}}>
-      <svg viewBox={`0 0 ${W} ${height}`} style={{width:"100%",minWidth:280,height:"auto",display:"block"}}>
+      <svg viewBox={"0 0 "+W+" "+height} style={{width:"100%",minWidth:280,height:"auto",display:"block"}}>
         {/* Grid linije */}
         {[0,25,50,75,100].map(pct=>{
           const y = H - (pct/100)*H;
@@ -2492,7 +2492,7 @@ function LineChart({data, xKey, yKey, color="#C8860A", height=160, label=""}) {
             <stop offset="100%" stopColor={color} stopOpacity="0.02"/>
           </linearGradient>
         </defs>
-        <path d={areaD} fill={`url(#grad_${yKey})`}/>
+        <path d={areaD} fill={"url(#grad_"+yKey+")"}/>
         {/* Linija */}
         <path d={pathD} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
         {/* Tačke i labele */}
@@ -2524,7 +2524,7 @@ function BarChart({data, xKey, bars, height=180}) {
   const groupW = W / data.length;
   return (
     <div style={{overflowX:"auto"}}>
-      <svg viewBox={`0 0 ${W} ${height}`} style={{width:"100%",minWidth:280,height:"auto",display:"block"}}>
+      <svg viewBox={"0 0 "+W+" "+height} style={{width:"100%",minWidth:280,height:"auto",display:"block"}}>
         {[0,25,50,75,100].map(pct=>{
           const y = H - (pct/100)*H;
           return <line key={pct} x1="0" y1={y} x2={W} y2={y} stroke="#E8DECA" strokeWidth="1" strokeDasharray="4"/>;
