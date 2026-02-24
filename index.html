@@ -83,6 +83,57 @@ input:focus,select:focus{outline:2px solid #E8A020;outline-offset:1px}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-thumb{background:#C8A050;border-radius:3px}
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+/* ── DARK MODE ── */
+:root {
+  --bg-page:    #F5F0E8;
+  --bg-card:    #FFFFFF;
+  --bg-card2:   #FAF6EE;
+  --bg-input:   #FEFCF5;
+  --bg-topbar:  #FFFFFF;
+  --text-main:  #1C1A17;
+  --text-sub:   #5A4A35;
+  --text-muted: #9A8A75;
+  --border:     #E0D5BE;
+  --border2:    #E8DECA;
+  --th-bg:      #1C1A17;
+  --th-color:   #FFFFFF;
+  --tr-alt:     #FAF6EE;
+  --tag-bg:     #F5F0E8;
+  --shadow:     rgba(74,44,10,.07);
+}
+[data-theme="dark"] {
+  --bg-page:    #111110;
+  --bg-card:    #1E1C19;
+  --bg-card2:   #252320;
+  --bg-input:   #2A2825;
+  --bg-topbar:  #1A1917;
+  --text-main:  #F0EAD6;
+  --text-sub:   #B8A888;
+  --text-muted: #7A6A55;
+  --border:     #3A3530;
+  --border2:    #3A3530;
+  --th-bg:      #0A0908;
+  --th-color:   #E8A020;
+  --tr-alt:     #252320;
+  --tag-bg:     #2A2825;
+  --shadow:     rgba(0,0,0,.3);
+}
+[data-theme="dark"] body { background: #111110; }
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border) !important;
+}
+[data-theme="dark"] button {
+  color-scheme: dark;
+}
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="color"] {
+  color-scheme: dark;
+}
 </style>
 
 <!-- KORAK 1: Firebase CDN (mora biti PRVO) -->
@@ -292,6 +343,11 @@ function App() {
   const [loading,  setLoad]   = useState(true);
   const [saveSt,   setSaveSt] = useState("");
   const [fbSt,     setFbSt]   = useState("🔄 Spajanje...");
+  const [darkMode, setDarkMode] = useState(()=>{try{return localStorage.getItem('mm_dark')==='1';}catch(e){return false;}});
+  React.useEffect(()=>{
+    document.documentElement.setAttribute('data-theme', darkMode?'dark':'light');
+    try{localStorage.setItem('mm_dark', darkMode?'1':'0');}catch(e){}
+  }, [darkMode]);
 
   useEffect(() => {
     // Timeout — ako Firebase ne odgovori za 15 sekundi, prikaži grešku
@@ -402,7 +458,7 @@ function App() {
     <div style={S.app}>
       <Sidebar tabs={mojiTabovi} tab={validTab} setTab={setTab} session={session} perms={perms} fbSt={fbSt} onLogout={()=>setSess(null)} />
       <div style={S.main}>
-        <TopBar tab={validTab} tabs={TABS} saveSt={saveSt} session={session} perms={perms} myLokal={myLokal} />
+        <TopBar tab={validTab} tabs={TABS} saveSt={saveSt} session={session} perms={perms} myLokal={myLokal} darkMode={darkMode} setDarkMode={setDarkMode} />
         <div style={S.content}>
           {validTab==="dashboard"  && <Dashboard   data={data} />}
           {validTab==="dnevnapro"  && <DnevnaProizvodnja data={data} persist={persist} session={session} addLog={addLog} />}
@@ -523,7 +579,7 @@ function TopBar({tab,tabs,saveSt,session,perms,myLokal}) {
   const t=tabs.find(x=>x.key===tab); const lok=myLokal?LOKALI[myLokal]:null;
   return (
     <header style={S.topbar}>
-      <h1 style={{margin:0,fontSize:18,fontFamily:"Georgia,serif",color:"#1C1A17"}}>{t?.icon} {t?.label}</h1>
+      <h1 style={{margin:0,fontSize:18,fontFamily:"Georgia,serif",color:"var(--text-main)"}}>{t?.icon} {t?.label}</h1>
       <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
         {saveSt&&<span style={{fontSize:12,color:saveSt.includes("✅")?"#107C41":saveSt.includes("❌")?"#C00000":"#A07010",fontWeight:700}}>{saveSt}</span>}
         {lok&&<Tag bg={lok.bg} color={lok.boja}>{lok.icon} {lok.naziv}</Tag>}
@@ -3361,24 +3417,24 @@ function AdminPanel({data, persist, addLog, session}) {
 }
 
 // ── SHARED UI ─────────────────────────────────────────────────────
-function Card({title,children}){return <div style={{background:"white",borderRadius:14,padding:"18px 20px",boxShadow:"0 2px 12px rgba(74,44,10,.07)",border:"1px solid #E8DECA"}}>{title&&<h3 style={{margin:"0 0 14px",fontFamily:"Georgia,serif",fontSize:14,color:"#1C1A17",borderBottom:"2px solid #E8D5A0",paddingBottom:10}}>{title}</h3>}{children}</div>;}
-function Modal({title,children,onClose}){return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16,backdropFilter:"blur(3px)"}}><div style={{background:"white",borderRadius:16,width:"100%",maxWidth:580,maxHeight:"92vh",overflow:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.35)"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid #E8DECA",background:"#FAF6EE",borderRadius:"16px 16px 0 0"}}><h2 style={{margin:0,fontSize:16,fontFamily:"Georgia,serif",color:"#1C1A17"}}>{title}</h2><button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#7A6545"}}>✕</button></div><div style={{padding:"20px"}}>{children}</div></div></div>;}
+function Card({title,children}){return <div style={{background:"var(--bg-card)",borderRadius:14,padding:"18px 20px",boxShadow:"0 2px 12px var(--shadow)",border:"1px solid var(--border2)"}}>{title&&<h3 style={{margin:"0 0 14px",fontFamily:"Georgia,serif",fontSize:14,color:"var(--text-main)",borderBottom:"2px solid var(--border2)",paddingBottom:10}}>{title}</h3>}{children}</div>;}
+function Modal({title,children,onClose}){return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16,backdropFilter:"blur(3px)"}}><div style={{background:"var(--bg-card)",borderRadius:16,width:"100%",maxWidth:580,maxHeight:"92vh",overflow:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.5)"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid var(--border2)",background:"var(--bg-card2)",borderRadius:"16px 16px 0 0"}}><h2 style={{margin:0,fontSize:16,fontFamily:"Georgia,serif",color:"var(--text-main)"}}>{title}</h2><button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--text-sub)"}}>✕</button></div><div style={{padding:"20px"}}>{children}</div></div></div>;}
 function Btn({icon,label,onClick,color="#C8860A",full}){return <button onClick={onClick} style={{background:color,color:"white",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,width:full?"100%":"auto",justifyContent:full?"center":undefined}}><span>{icon}</span>{label}</button>;}
 function Tag({bg="#F5F5F5",color="#333",children}){return <span style={{background:bg,color,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block"}}>{children}</span>;}
 function Alert({children}){return <div style={{background:"#FFF3CD",border:"1px solid #FBBF24",borderRadius:12,padding:"12px 18px",display:"flex",alignItems:"center",gap:10,color:"#92400E",fontWeight:600,fontSize:13}}>{children}</div>;}
 
 // ── STYLES ────────────────────────────────────────────────────────
 const S={
-  app:{display:"flex",height:"100vh",overflow:"hidden",fontFamily:"'Segoe UI','Helvetica Neue',sans-serif",background:"#F5F0E8"},
+  app:{display:"flex",height:"100vh",overflow:"hidden",fontFamily:"'Segoe UI','Helvetica Neue',sans-serif",background:"var(--bg-page)"},
   sidebar:{background:"linear-gradient(180deg,#0F0E0B 0%,#1C1A17 60%,#2A2318 100%)",display:"flex",flexDirection:"column",overflowY:"auto",flexShrink:0},
   main:{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"},
-  topbar:{background:"white",borderBottom:"1px solid #E0D5BE",padding:"12px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,boxShadow:"0 1px 4px rgba(0,0,0,.06)",gap:10,flexWrap:"wrap"},
+  topbar:{background:"var(--bg-topbar)",borderBottom:"1px solid var(--border)",padding:"12px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,boxShadow:"0 1px 4px var(--shadow)",gap:10,flexWrap:"wrap"},
   content:{flex:1,overflowY:"auto",padding:"18px 22px",display:"flex",flexDirection:"column",gap:18},
-  input:{width:"100%",padding:"9px 12px",border:"1.5px solid #E0D5BE",borderRadius:8,fontSize:13,background:"#FEFCF5",color:"#1C1A17",outline:"none",boxSizing:"border-box",fontFamily:"inherit"},
-  label:{display:"block",fontSize:11,fontWeight:700,color:"#5A4A35",marginBottom:4,textTransform:"uppercase",letterSpacing:".4px"},
-  th:{padding:"9px 12px",textAlign:"left",color:"white",fontWeight:600,fontSize:11,whiteSpace:"nowrap"},
-  td:{padding:"8px 12px",borderBottom:"1px solid #E8DECA",verticalAlign:"middle"},
-  btn2:{padding:"4px 8px",background:"#FAF6EE",border:"1px solid #E0D5BE",borderRadius:6,cursor:"pointer",fontSize:13,marginRight:3},
+  input:{width:"100%",padding:"9px 12px",border:"1.5px solid var(--border)",borderRadius:8,fontSize:13,background:"var(--bg-input)",color:"var(--text-main)",outline:"none",boxSizing:"border-box",fontFamily:"inherit"},
+  label:{display:"block",fontSize:11,fontWeight:700,color:"var(--text-sub)",marginBottom:4,textTransform:"uppercase",letterSpacing:".4px"},
+  th:{padding:"9px 12px",textAlign:"left",color:"var(--th-color)",fontWeight:600,fontSize:11,whiteSpace:"nowrap"},
+  td:{padding:"8px 12px",borderBottom:"1px solid var(--border2)",verticalAlign:"middle"},
+  btn2:{padding:"4px 8px",background:"var(--bg-card2)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",fontSize:13,marginRight:3},
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
