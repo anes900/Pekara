@@ -327,8 +327,6 @@ function App() {
   const [fbSt,     setFbSt]   = useState("🔄 Spajanje...");
   const [darkMode, setDarkMode] = useState(()=>{try{return localStorage.getItem('mm_dark')==='1';}catch(e){return false;}});
   const [isMobile, setIsMobile] = useState(()=>window.innerWidth < 768);
-  const [pulling, setPulling] = useState(0); // 0-100 progress
-  const pullStartY = React.useRef(null);
   React.useEffect(()=>{
     const onResize = ()=>setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
@@ -450,30 +448,8 @@ function App() {
       <BottomNav tabs={mojiTabovi} tab={validTab} setTab={setTab} isMobile={isMobile} />
       <Sidebar tabs={mojiTabovi} tab={validTab} setTab={setTab} session={session} perms={perms} fbSt={fbSt} onLogout={()=>setSess(null)} isMobile={isMobile} />
       <div style={{...S.main, filter: darkMode?"invert(1) hue-rotate(180deg)":"none"}}>
-        {pulling>0&&(
-          <div style={{position:"fixed",top:0,left:0,right:0,zIndex:1001,height:3,background:"#E8DECA"}}>
-            <div style={{height:"100%",width:pulling+"%",background:"#E8A020",transition:"width .05s"}}/>
-          </div>
-        )}
-        {pulling>=80&&(
-          <div style={{position:"fixed",top:8,left:"50%",transform:"translateX(-50%)",zIndex:1002,
-            background:"#1C1A17",color:"#E8A020",borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700}}>
-            ↻ Pusti za osvježavanje
-          </div>
-        )}
         <TopBar tab={validTab} tabs={TABS} saveSt={saveSt} session={session} perms={perms} myLokal={myLokal} darkMode={darkMode} setDarkMode={setDarkMode} isMobile={isMobile} />
-        <div style={{...S.content, paddingBottom:isMobile?"80px":"18px"}} className="mm-content"
-          onTouchStart={e=>{ if(e.touches[0].clientY < 80) pullStartY.current=e.touches[0].clientY; }}
-          onTouchMove={e=>{
-            if(pullStartY.current===null) return;
-            const dy=e.touches[0].clientY - pullStartY.current;
-            if(dy>0) setPulling(Math.min(100, Math.round(dy/1.2)));
-          }}
-          onTouchEnd={()=>{
-            if(pulling>=80){ window.location.reload(); }
-            else { setPulling(0); pullStartY.current=null; }
-          }}
-        >
+        <div style={{...S.content, paddingBottom:isMobile?"80px":"18px"}} className="mm-content">
           {validTab==="dashboard"  && <Dashboard   data={data} />}
           {validTab==="dnevnapro"  && <DnevnaProizvodnja data={data} persist={persist} session={session} addLog={addLog} />}
           {validTab==="dostava"    && <Dostava     data={data} persist={persist} perms={perms} session={session} addLog={addLog} />}
