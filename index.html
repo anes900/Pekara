@@ -327,6 +327,8 @@ function App() {
   const [fbSt,     setFbSt]   = useState("🔄 Spajanje...");
   const [darkMode, setDarkMode] = useState(()=>{try{return localStorage.getItem('mm_dark')==='1';}catch(e){return false;}});
   const [isMobile, setIsMobile] = useState(()=>window.innerWidth < 768);
+  const [pulling, setPulling] = useState(0); // 0-100 progress
+  const pullStartY = React.useRef(null);
   React.useEffect(()=>{
     const onResize = ()=>setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
@@ -448,8 +450,30 @@ function App() {
       <BottomNav tabs={mojiTabovi} tab={validTab} setTab={setTab} isMobile={isMobile} />
       <Sidebar tabs={mojiTabovi} tab={validTab} setTab={setTab} session={session} perms={perms} fbSt={fbSt} onLogout={()=>setSess(null)} isMobile={isMobile} />
       <div style={{...S.main, filter: darkMode?"invert(1) hue-rotate(180deg)":"none"}}>
+        {pulling>0&&(
+          <div style={{position:"fixed",top:0,left:0,right:0,zIndex:1001,height:3,background:"#E8DECA"}}>
+            <div style={{height:"100%",width:pulling+"%",background:"#E8A020",transition:"width .05s"}}/>
+          </div>
+        )}
+        {pulling>=80&&(
+          <div style={{position:"fixed",top:8,left:"50%",transform:"translateX(-50%)",zIndex:1002,
+            background:"#1C1A17",color:"#E8A020",borderRadius:20,padding:"6px 16px",fontSize:12,fontWeight:700}}>
+            ↻ Pusti za osvježavanje
+          </div>
+        )}
         <TopBar tab={validTab} tabs={TABS} saveSt={saveSt} session={session} perms={perms} myLokal={myLokal} darkMode={darkMode} setDarkMode={setDarkMode} isMobile={isMobile} />
-        <div style={{...S.content, paddingBottom:isMobile?"80px":"18px"}} className="mm-content">
+        <div style={{...S.content, paddingBottom:isMobile?"80px":"18px"}} className="mm-content"
+          onTouchStart={e=>{ if(e.touches[0].clientY < 80) pullStartY.current=e.touches[0].clientY; }}
+          onTouchMove={e=>{
+            if(pullStartY.current===null) return;
+            const dy=e.touches[0].clientY - pullStartY.current;
+            if(dy>0) setPulling(Math.min(100, Math.round(dy/1.2)));
+          }}
+          onTouchEnd={()=>{
+            if(pulling>=80){ window.location.reload(); }
+            else { setPulling(0); pullStartY.current=null; }
+          }}
+        >
           {validTab==="dashboard"  && <Dashboard   data={data} />}
           {validTab==="dnevnapro"  && <DnevnaProizvodnja data={data} persist={persist} session={session} addLog={addLog} />}
           {validTab==="dostava"    && <Dostava     data={data} persist={persist} perms={perms} session={session} addLog={addLog} />}
@@ -476,65 +500,105 @@ function App() {
 
 // ── LOGIN ─────────────────────────────────────────────────────────
 function LoginScreen({ korisnici, onLogin }) {
-  const [ime,setIme]=useState(""); const [pin,setPin]=useState(""); const [err,setErr]=useState(""); const [showP,setShowP]=useState(false);
-  const go=()=>{const k=korisnici.find(k=>k.ime.toLowerCase()===ime.trim().toLowerCase()&&k.pin===pin.trim());if(k)onLogin(k.ime,k.uloga);else{setErr("❌ Pogrešno ime ili PIN!");setPin("");}};
+  const [ime,setIme]=useState(""); const [pin,setPin]=useState(""); const [err,setErr]=useState("");
+  const go=()=>{
+    const k=korisnici.find(k=>k.ime.toLowerCase()===ime.trim().toLowerCase()&&k.pin===pin);
+    if(k) onLogin(k.ime,k.uloga);
+    else { setErr("Pogrešan PIN!"); setPin(""); }
+  };
+  const addDigit = d => { if(pin.length<6){ const np=pin+d; setPin(np); setErr(""); if(np.length===4||np.length===6){ const k=korisnici.find(k=>k.ime.toLowerCase()===ime.trim().toLowerCase()&&k.pin===np); if(k) onLogin(k.ime,k.uloga); else if(np.length>=4) { setErr("Pogrešan PIN!"); setTimeout(()=>setPin(""),400); } } } };
+  const delDigit = () => { setPin(p=>p.slice(0,-1)); setErr(""); };
+
   return (
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0F0E0B 0%,#1C1A17 50%,#2A2318 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:"#FAF6EE",borderRadius:24,padding:"36px 40px",borderTop:"4px solid #E8A020",maxWidth:430,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.5)"}}>
-        <div style={{textAlign:"center",marginBottom:24}}>
-          {/* Mama Mantia Logo */}
-          <div style={{display:"inline-flex",flexDirection:"column",alignItems:"center",justifyContent:"center",width:150,height:150,borderRadius:"50%",background:"#1C1A17",border:"6px solid #E8A020",boxShadow:"0 0 0 5px rgba(232,160,32,.15), 0 12px 40px rgba(0,0,0,.5)",marginBottom:14,position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(45deg,rgba(232,160,32,.06) 0px,rgba(232,160,32,.06) 9px,transparent 9px,transparent 18px),repeating-linear-gradient(-45deg,rgba(232,160,32,.06) 0px,rgba(232,160,32,.06) 9px,transparent 9px,transparent 18px)"}}/>
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0F0E0B 0%,#1C1A17 50%,#2A2318 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#FAF6EE",borderRadius:24,padding:"32px 28px",borderTop:"4px solid #E8A020",maxWidth:400,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.6)"}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{display:"inline-flex",flexDirection:"column",alignItems:"center",justifyContent:"center",width:120,height:120,borderRadius:"50%",background:"linear-gradient(135deg,#1C1A17,#2A2318)",border:"3px solid #E8A020",position:"relative",overflow:"hidden",marginBottom:12}}>
+            <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(45deg,rgba(232,160,32,.06) 0px,rgba(232,160,32,.06) 9px,transparent 9px,transparent 18px)"}}/>
             <div style={{position:"relative",zIndex:1,textAlign:"center",lineHeight:1}}>
-              <div style={{fontFamily:"Georgia,'Times New Roman',serif",fontSize:21,fontWeight:700,color:"white",fontStyle:"italic",textShadow:"0 2px 8px rgba(0,0,0,.7)",letterSpacing:1}}>Mama</div>
-              {/* Oklagija — rolling pin SVG */}
+              <div style={{fontFamily:"Georgia,'Times New Roman',serif",fontSize:21,fontWeight:700,color:"#E8A020",letterSpacing:1}}>mama</div>
               <svg width="90" height="22" viewBox="0 0 90 22" style={{display:"block",margin:"4px auto"}}>
-                {/* left handle */}
                 <rect x="0" y="7" width="14" height="8" rx="4" fill="#C8860A"/>
                 <rect x="2" y="9" width="10" height="4" rx="2" fill="#E8A020"/>
-                {/* roller body */}
                 <rect x="13" y="4" width="64" height="14" rx="7" fill="#C8860A"/>
                 <rect x="15" y="6" width="60" height="10" rx="5" fill="#E8A020"/>
-                {/* shine */}
-                <rect x="20" y="7" width="40" height="3" rx="2" fill="rgba(255,255,255,.25)"/>
-                {/* right handle */}
                 <rect x="76" y="7" width="14" height="8" rx="4" fill="#C8860A"/>
                 <rect x="78" y="9" width="10" height="4" rx="2" fill="#E8A020"/>
+                <rect x="28" y="2" width="2" height="18" rx="1" fill="rgba(255,255,255,.15)"/>
+                <rect x="44" y="2" width="2" height="18" rx="1" fill="rgba(255,255,255,.15)"/>
+                <rect x="60" y="2" width="2" height="18" rx="1" fill="rgba(255,255,255,.15)"/>
               </svg>
-              <div style={{fontFamily:"Georgia,'Times New Roman',serif",fontSize:21,fontWeight:700,color:"white",fontStyle:"italic",textShadow:"0 2px 8px rgba(0,0,0,.7)",letterSpacing:1}}>Mantia</div>
+              <div style={{fontFamily:"Georgia,'Times New Roman',serif",fontSize:21,fontWeight:700,color:"#E8A020",letterSpacing:1}}>mantia</div>
             </div>
           </div>
-          <h1 style={{fontFamily:"Georgia,'Times New Roman',serif",fontSize:26,color:"#1C1A17",margin:"0 0 4px",fontStyle:"italic",fontWeight:700}}>Mama Mantia</h1>
-          <p style={{color:"#7A6545",fontSize:11,letterSpacing:3,textTransform:"uppercase"}}>Novi Pazar</p>
+          <div style={{fontSize:13,color:"#7A6545"}}>Sistem upravljanja</div>
         </div>
-        <label style={S.label}>Vaše ime</label>
-        <input value={ime} onChange={e=>{setIme(e.target.value);setErr("");}} placeholder="Unesite ime..." style={{...S.input,marginBottom:14}} onKeyDown={e=>e.key==="Enter"&&document.getElementById("pin_i")?.focus()}/>
-        <label style={S.label}>PIN kod</label>
-        <div style={{position:"relative",marginBottom:20}}>
-          <input id="pin_i" type={showP?"text":"password"} value={pin} onChange={e=>{setPin(e.target.value.replace(/\D/g,""));setErr("");}} placeholder="••••" maxLength={6} style={{...S.input,letterSpacing:6,fontSize:24,textAlign:"center",paddingRight:44}} onKeyDown={e=>e.key==="Enter"&&go()}/>
-          <button onClick={()=>setShowP(!showP)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18}}>{showP?"🙈":"👁️"}</button>
-        </div>
-        {err&&<div style={{background:"#FFF0F0",border:"1px solid #FFCCCC",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#C00000",fontWeight:600,marginBottom:14}}>{err}</div>}
-        <button onClick={go} disabled={!ime.trim()||!pin.trim()} style={{width:"100%",padding:14,background:ime.trim()&&pin.trim()?"linear-gradient(135deg,#1C1A17,#2A2318)":"#D4C89A",color:"white",border:"none",borderRadius:12,fontSize:16,fontWeight:700,cursor:ime.trim()&&pin.trim()?"pointer":"not-allowed",fontFamily:"Georgia,serif",marginBottom:18}}>Uđi u sistem →</button>
-        <div style={{background:"#FFF8DC",borderRadius:12,border:"1px solid #E8D5A0",padding:14}}>
-          <div style={{fontSize:11,color:"#7A6545",fontWeight:700,marginBottom:8}}>📋 KORISNICI — klik za popunjavanje</div>
-          {korisnici.map(k=>{const u=ULOGE[k.uloga];const lok=u?.lokal?LOKALI[u.lokal]:null;return(
-            <div key={k.id} onClick={()=>{setIme(k.ime);setErr("");}} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,cursor:"pointer",marginBottom:3,background:"rgba(255,255,255,.7)"}}>
-              <span style={{fontSize:18}}>{u?.icon}</span>
-              <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13,color:"#1C1A17"}}>{k.ime}</div><div style={{fontSize:11,color:"#7A6545"}}>{u?.label}{lok?` · ${lok.icon} ${lok.naziv}`:""}</div></div>
-              <span style={{fontSize:11,color:"#C8A050"}}>klik →</span>
+
+        {/* Odabir korisnika */}
+        {!ime ? (
+          <div>
+            <div style={{fontSize:12,color:"#7A6545",fontWeight:700,marginBottom:10,textAlign:"center",textTransform:"uppercase",letterSpacing:.5}}>Odaberi korisnika</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {korisnici.map(k=>{const u=ULOGE[k.uloga];const lok=u?.lokal?LOKALI[u.lokal]:null;return(
+                <button key={k.id} onClick={()=>{setIme(k.ime);setPin("");setErr("");}}
+                  style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:12,border:"1px solid #E8DECA",background:"white",cursor:"pointer",textAlign:"left",width:"100%"}}>
+                  <span style={{fontSize:22}}>{u?.icon}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#1C1A17"}}>{k.ime}</div>
+                    <div style={{fontSize:11,color:"#7A6545"}}>{u?.naziv}{lok?" · "+lok.naziv:""}</div>
+                  </div>
+                  <span style={{color:"#C8A050",fontSize:18}}>›</span>
+                </button>
+              );})}
             </div>
-          );})}
-        </div>
+          </div>
+        ) : (
+          <div>
+            {/* Odabrani korisnik */}
+            <button onClick={()=>{setIme("");setPin("");setErr("");}}
+              style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,background:"#F0EBE0",border:"none",borderRadius:10,padding:"8px 14px",cursor:"pointer",width:"100%"}}>
+              <span style={{fontSize:20}}>{ULOGE[korisnici.find(k=>k.ime===ime)?.uloga]?.icon}</span>
+              <span style={{fontWeight:700,fontSize:14,color:"#1C1A17",flex:1,textAlign:"left"}}>{ime}</span>
+              <span style={{fontSize:12,color:"#7A6545"}}>← Promijeni</span>
+            </button>
+
+            {/* PIN prikaz */}
+            <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:20}}>
+              {[0,1,2,3].map(i=>(
+                <div key={i} style={{width:16,height:16,borderRadius:"50%",
+                  background:pin.length>i?"#1C1A17":"transparent",
+                  border:"2px solid "+(pin.length>i?"#1C1A17":"#C8A050"),
+                  transition:"background .15s"}}/>
+              ))}
+            </div>
+
+            {err&&<div style={{background:"#FFF0F0",border:"1px solid #FFCCCC",borderRadius:10,padding:"8px 12px",fontSize:13,color:"#C00000",fontWeight:700,textAlign:"center",marginBottom:12}}>{err}</div>}
+
+            {/* Numpad */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+              {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((d,i)=>(
+                <button key={i} onClick={()=>d==="⌫"?delDigit():d!==""?addDigit(String(d)):null}
+                  disabled={d===""}
+                  style={{padding:"16px 0",borderRadius:14,border:"1px solid #E8DECA",
+                    background:d==="⌫"?"#FFF0F0":d===""?"transparent":"white",
+                    color:d==="⌫"?"#C00000":"#1C1A17",
+                    fontSize:d==="⌫"?20:22,fontWeight:700,cursor:d===""?"default":"pointer",
+                    boxShadow:d!==""&&d!=="⌫"?"0 2px 6px rgba(0,0,0,.08)":"none",
+                    transition:"background .1s"}}>
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ── SIDEBAR ───────────────────────────────────────────────────────
-// ── MOBILE BOTTOM NAV ─────────────────────────────────────────────
 function BottomNav({tabs, tab, setTab, isMobile}) {
   const [showAll, setShowAll] = React.useState(false);
+  const navSwipeX = React.useRef(0);
   if(!isMobile) return null;
 
   // Prvih 4 najbitnija + "Više" dugme
@@ -595,7 +659,20 @@ function BottomNav({tabs, tab, setTab, isMobile}) {
         background:"#1C1A17", borderTop:"2px solid #E8A020",
         boxShadow:"0 -4px 20px rgba(0,0,0,.5)",
         paddingBottom:"env(safe-area-inset-bottom,0px)"
-      }}>
+      }}
+        onTouchStart={e=>{ navSwipeX.current=e.touches[0].clientX; }}
+        onTouchEnd={e=>{
+          const dx=e.changedTouches[0].clientX - navSwipeX.current;
+          if(Math.abs(dx)<50) return;
+          setTab(prev=>{
+            const keys=tabs.map(t=>t.key);
+            const ci=keys.indexOf(prev);
+            if(dx<0 && ci<keys.length-1) return keys[ci+1];
+            if(dx>0 && ci>0) return keys[ci-1];
+            return prev;
+          });
+        }}
+      >
         {glavni.map(t=><NavBtn key={t.key} t={t}/>)}
         {/* Više dugme */}
         <button onClick={()=>setShowAll(s=>!s)} style={{
