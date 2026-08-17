@@ -774,7 +774,7 @@ const missingHistory = React.useMemo(() => {
   const missing = [];
   otps.forEach(o => {
     (o.stavke || []).forEach(st => {
-      const found = kret.find(k => k.otpremnicaId === o.id && k.siroId === st.siroId);
+      const found = kret.find(k => k.siroId === st.siroId && (k.otpremnicaId === o.id || (o.brOtpremnice && k.napomena === `Otpremnica ${o.brOtpremnice}` && k.datum === o.datum)));
       if (!found) {
         missing.push({ otpId:o.id, brOtpremnice:o.brOtpremnice, datum:o.datum, vreme:o.vreme, korisnik:o.korisnik, siroId:st.siroId, naziv:st.naziv, jm:st.jm, kolicina:st.kolicina, cena:st.cena, vrednost: st.vrednost!=null ? st.vrednost : (+st.kolicina)*(+st.cena||0) });
       }
