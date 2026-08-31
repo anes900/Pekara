@@ -1011,29 +1011,29 @@ const dostave = data.dostave||[]; const zaklucaci = data.zaklucakSmjene||[]; ret
         })}
       </>
     )}
-  </div>
-  <div style={{marginTop:22,paddingTop:18,borderTop:"2px solid #E8DECA"}}>
-    <div style={{background:"#FFF0F0",border:"1px solid #FFD5D5",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#5A4A35",marginBottom:14,lineHeight:1.7}}>
-      🧹 <b>Duplikati u istoriji kretanja</b> — traži zapise koji su nastali greškom stare verzije ovog alata (dvije stavke sa istim brojem otpremnice, istom sirovinom, istim datumom i količinom). Ako neki artikal u izvještajima izgleda naduvano, ovdje je vjerovatan uzrok.<br/>
-      <b style={{color:"#107C41"}}>Bezbjedno:</b> zadržava jedan (najstariji) zapis iz svake grupe, briše samo viškove — ne dira trenutne količine sirovina.
-    </div>
-    {dupliKretanja.length===0 ? (
-      <div style={{background:"#E8F5E9",border:"1px solid #BBF7D0",borderRadius:10,padding:16,textAlign:"center",color:"#107C41",fontWeight:700}}>
-        ✅ Nema pronađenih duplikata u istoriji kretanja.
+    <div style={{marginTop:22,paddingTop:18,borderTop:"2px solid #E8DECA"}}>
+      <div style={{background:"#FFF0F0",border:"1px solid #FFD5D5",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#5A4A35",marginBottom:14,lineHeight:1.7}}>
+        🧹 <b>Duplikati u istoriji kretanja</b> — traži zapise koji su nastali greškom stare verzije ovog alata (dvije stavke sa istim brojem otpremnice, istom sirovinom, istim datumom i količinom). Ako neki artikal u izvještajima izgleda naduvano, ovdje je vjerovatan uzrok.<br/>
+        <b style={{color:"#107C41"}}>Bezbjedno:</b> zadržava jedan (najstariji) zapis iz svake grupe, briše samo viškove — ne dira trenutne količine sirovina.
       </div>
-    ) : (
-      <>
-        <button onClick={ukloniDuplikate} style={{width:"100%",background:"#C00000",color:"white",border:"none",borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:14}}>
-          🧹 Ukloni {ukupnoViska} dupliciran{ukupnoViska===1?"i zapis":"ih zapisa"}
-        </button>
-        {dupliKretanja.map((d,i)=>(
-          <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:i%2===0?"white":"#FAF6EE",borderRadius:8,border:"1px solid #E8DECA",marginBottom:6,fontSize:12}}>
-            <span>{d.zadrzi.naziv} <span style={{color:"#9A8A75"}}>· {d.zadrzi.datum} · {d.zadrzi.napomena}</span></span>
-            <Tag bg="#FFF0F0" color="#C00000">+{d.viska.length} višak</Tag>
-          </div>
-        ))}
-      </>
-    )}
+      {dupliKretanja.length===0 ? (
+        <div style={{background:"#E8F5E9",border:"1px solid #BBF7D0",borderRadius:10,padding:16,textAlign:"center",color:"#107C41",fontWeight:700}}>
+          ✅ Nema pronađenih duplikata u istoriji kretanja.
+        </div>
+      ) : (
+        <>
+          <button onClick={ukloniDuplikate} style={{width:"100%",background:"#C00000",color:"white",border:"none",borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:14}}>
+            🧹 Ukloni {ukupnoViska} dupliciran{ukupnoViska===1?"i zapis":"ih zapisa"}
+          </button>
+          {dupliKretanja.map((d,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:i%2===0?"white":"#FAF6EE",borderRadius:8,border:"1px solid #E8DECA",marginBottom:6,fontSize:12}}>
+              <span>{d.zadrzi.naziv} <span style={{color:"#9A8A75"}}>· {d.zadrzi.datum} · {d.zadrzi.napomena}</span></span>
+              <Tag bg="#FFF0F0" color="#C00000">+{d.viska.length} višak</Tag>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
   </div>
 )}
 
